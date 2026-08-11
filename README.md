@@ -69,11 +69,12 @@ The race is a rhythm game in a sack-race costume, so the music is a game mechani
 kendang lands every 375 ms because `HOP_TIME`, `BUFFER` and `PERFECT` pin the
 combo-sustaining tap cycle to 0.20–0.48 s. Tap on the drum and the combo holds.
 
-The menus get the tune and nothing else; the crowd arrives with the race, so the kampung
+The menus get the first couplet of *Hari Merdeka* — in 2/4 at the song’s own 120 BPM,
+not the race’s 160 — and nothing else; the crowd arrives with the race, so the kampung
 turning up is itself the cue that you are about to run.
 
 Everything is synthesised by `tools/make_audio.py` — 15 cues on one sprite sheet plus
-four music stems, 247.7 KB of AAC, fetched at the email step so it never touches the
+four music stems, 233.2 KB of AAC, fetched at the email step so it never touches the
 critical path. `beep()` remains as the fallback for when `audio/` is unreachable, which
 includes opening `index.html` straight off the filesystem.
 
