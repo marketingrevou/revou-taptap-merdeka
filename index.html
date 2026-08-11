@@ -282,7 +282,6 @@
   .btn.merah:active{box-shadow:0 0 0 var(--merah-tua)}
   .btn.ghost{background:var(--putih);color:var(--merah);box-shadow:0 var(--badge-s) 0 #b99a6a}
   .btn.ghost:active{box-shadow:0 0 0 #b99a6a}
-  .row{display:flex;gap:clamp(8px,1.8vmin,16px);flex-wrap:wrap;justify-content:center}
   /* the UA ring is near-invisible on the red fills, and the title screen is now
      mostly buttons — give keyboard focus something that reads on every surface */
   .btn:focus-visible,.pill:focus-visible,.arrow:focus-visible,
@@ -374,8 +373,6 @@
   #nameplate{padding:calc(var(--badge-b) * .8) 1.5em;text-align:center}
   #nameplate b{display:block;color:var(--ink);font-size:clamp(19px,3.6vmin,32px);letter-spacing:.03em;
                text-transform:uppercase}
-  #nameplate i{display:block;font-style:normal;color:var(--merah);margin-top:.15em;font-weight:600;
-               font-size:clamp(10px,1.8vmin,15px);letter-spacing:.14em;text-transform:uppercase}
   #nameplate.pop{animation:pop .3s ease both}
   @keyframes pop{from{opacity:0;transform:translateY(7px) scale(.96)}to{opacity:1;transform:none}}
 
@@ -410,11 +407,11 @@
      wide and type that is small — one variable cannot do both. Everywhere else
      --ts is just --cw. Only --pad stays on --cw: it is a width, not a type size. */
   #reveal{--cw:min(94vw,455px);
-          /* 58vh is the height cap. On a portrait phone it never binds (58vh is
+          /* 74vh is the height cap. On a portrait phone it never binds (74vh is
              larger than the card is wide), so the scale is just --cw; it exists
-             for the squat window — including an ordinary 1280x713 desktop, where
-             the uncapped card ran 27px past the fold. */
-          --ts:min(var(--cw),58vh);
+             for the squat window, where an uncapped card ran past the fold.
+             Measured, not chosen: 80vh overflows a 740x360 window by 7px. */
+          --ts:min(var(--cw),74vh);
           --crest:calc(var(--ts) * .34);
           position:relative;z-index:1;margin-top:auto;margin-bottom:auto;
           display:flex;flex-direction:column;align-items:center;
@@ -624,13 +621,13 @@
 
      So the figure and the result go side by side, which buys back most of the
      height the single column was spending. The layer's own padding and the
-     Ganti Karakter button do not scale with --ts, and at this height they are a
-     big enough fraction of the budget to be worth trimming too. */
+     layer's own padding does not scale with --ts, and at this height it is a big
+     enough fraction of the budget to be worth trimming too. */
   @media (max-height:620px) and (min-width:520px){
     /* 52vh is measured, not chosen: it is where the tallest of these layouts
        (568x320, the smallest landscape phone still worth supporting) stops
        needing to scroll. */
-    #reveal{--ts:min(40vw,300px,52vh);--cw:min(96vw,calc(var(--ts) * 2.5));
+    #reveal{--ts:min(40vw,300px,94vh);--cw:min(96vw,calc(var(--ts) * 2.5));
             gap:clamp(6px,1.2vmin,11px)}
     #scr-done{padding:clamp(8px,1.6vmin,16px)}
     #results{display:grid;grid-template-columns:1fr 1fr;
@@ -643,7 +640,6 @@
        column is much shorter than the ticket beside it, so sharing the ticket's
        rows would strand the strip at the bottom of the card */
     #side  {grid-column:2;grid-row:3/span 2;align-self:start}
-    #scr-done .btn{padding:.5em 1.6em;font-size:calc(var(--ts) * .05)}
   }
 
   /* the frame places it at 116px on 1920 wide, 50/55 in from the corner */
@@ -744,7 +740,7 @@
       <button class="arrow" id="prev" aria-label="Sebelumnya">‹</button>
       <button class="arrow" id="next" aria-label="Berikutnya">›</button>
     </div>
-    <div id="nameplate" class="badge"><b id="pick-name"></b><i id="pick-tag"></i></div>
+    <div id="nameplate" class="badge"><b id="pick-name"></b></div>
     <div id="dots"></div>
     <button class="btn merah" id="btn-go">Ayo Balap!</button>
   </div>
@@ -832,11 +828,11 @@
         </div>
       </div>
 
+      <!-- The results card is the end of the run: one play per email, so there is
+           deliberately nothing to press here. The keyboard handler already refuses
+           to restart from this state, and #tapzone is only live during the race,
+           so this was the last way back into the game. -->
       <p id="claim"><span>Hubungi tim Admission RevoU untuk klaim hadiah kamu!</span></p>
-
-      <div class="row">
-        <button class="btn ghost" id="btn-change">Ganti Karakter</button>
-      </div>
     </div>
   </div>
 
@@ -860,10 +856,10 @@
 /* ------------------------------------------------------------------ data -- */
 
 const CHARS = [
-  {id:"bapak", name:"Bapak",  tag:"Langkah mantap"},
-  {id:"ibu",   name:"Ibu",    tag:"Gesit & lincah"},
-  {id:"adik",  name:"Adik",   tag:"Kecil tapi cepat"},
-  {id:"kakak", name:"Kakak",  tag:"Penuh semangat"},
+  {id:"bapak", name:"Bapak"},
+  {id:"ibu",   name:"Ibu"},
+  {id:"adik",  name:"Adik"},
+  {id:"kakak", name:"Kakak"},
 ];
 const POSES = ["stand","ready","jump"];
 
@@ -2318,7 +2314,6 @@ function setPick(i, quiet){
 
   const np = $("nameplate");
   $("pick-name").textContent = CHARS[pick].name;
-  $("pick-tag").textContent  = CHARS[pick].tag;
   if(changed){ np.classList.remove("pop"); void np.offsetWidth; np.classList.add("pop"); }
 
   [...$("dots").children].forEach((d, k) => d.classList.toggle("on", k === pick));
@@ -2478,7 +2473,7 @@ $("email-form").onsubmit = async ev => {
   }
 
   btn.disabled = true;
-  note.textContent = "Mengunci hadiah…";
+  note.textContent = "Menyimpan data…";
   try {
     const res = await claimPrize(email);
     if(!res.ok) throw new Error(res.error || "gagal");
@@ -2503,7 +2498,6 @@ $("email-form").onsubmit = async ev => {
 
 $("btn-play").onclick   = () => { sfxConfirm(); toEmail(); };
 $("btn-go").onclick     = () => { sfxConfirm(); startRace(); };
-$("btn-change").onclick = () => toSelect();
 
 const zone = $("tapzone");
 zone.addEventListener("pointerdown", e => { e.preventDefault(); tap(); });
