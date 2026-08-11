@@ -1,0 +1,7 @@
+# Netlify. Both variants are the same index.html; the page reads /swe off the path.
+#
+# The trailing slash is stripped first, on purpose: at /swe the relative asset
+# URLs in index.html resolve against the root (/assets/...), but at /swe/ they
+# would resolve to /swe/assets/... and 404. So only the exact /swe is rewritten.
+/swe/   /swe          301!
+/swe    /index.html   200

@@ -7,7 +7,7 @@
       "runtimeArgs": [
         "/Users/andrewcp/Documents/RevoU/AI Apps/TapTapMerdeka2/tools/serve.py"
       ],
-      "port": 8123,
+      "port": 8145,
       "autoPort": true
     }
   ]
