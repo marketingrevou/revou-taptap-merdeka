@@ -26,7 +26,7 @@ for src in audio/wav/*.wav; do
     hook)   q=55 ;;   # tonal brass, cheap for VBR
     payoff) q=55 ;;
     sfx)    q=60 ;;   # short transients, but 14 cues share one file
-    bed)    q=45 ;;   # tonal and quiet
+    bed)    q=40 ;;   # tonal, quiet, and q35-q40 land on the same allocation
     crowd)  q=35 ;;   # a -26 dBFS noise wash; nobody can hear the artefacts
     *)      q=55 ;;
   esac

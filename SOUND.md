@@ -72,15 +72,40 @@ crossfade, no artefacts, one musical idea the whole way through.
 
 | Layer | File | Plays during | Content |
 |---|---|---|---|
-| **A** bed | `audio/bed.m4a` | title → email → picker | Angklung ostinato. Warm, waiting, no pulse. 6.0 s. |
-| — crowd | `audio/crowd.m4a` | everywhere | The kampung, underneath everything. 6.0 s. |
+| **A** bed | `audio/bed.m4a` | title → email → picker | The menu tune: an 8-bar march for suling and angklung. No pulse. 12.0 s. |
+| — crowd | `audio/crowd.m4a` | **race only** | The kampung, underneath the race. 6.0 s. |
 | **B** pulse | `audio/pulse.m4a` | countdown → race | Kendang + marching snare, quarter notes at 160. **This is the tap metronome.** 3.0 s. |
 | **C** hook | `audio/hook.m4a` | race, from combo ≥ 4 | Tanjidor brass hook. A reward for finding the rhythm. 6.0 s. |
 | **D** payoff | `audio/payoff.m4a` | results | Full band + suling + crowd roar. One-shot, 4 s, does not loop. |
 
-The crowd wash is its own stem rather than baked into the bed, because the race
-wants it without the angklung and the menus want it with. Keeping the bed purely
-tonal also made it three times cheaper to encode.
+**The menus are music only — no crowd.** The crowd arriving *is* the cue that the
+race is about to start, which is worth more than atmosphere on a cover screen. It
+also means the bed plays alone, so its length is unconstrained; it runs 8 bars
+because a player spends twenty-odd seconds reading and typing on those screens and
+a 4-bar phrase starts to nag over that long. 12 s still divides 6 and 3, so
+layering it stays possible.
+
+### The menu tune, and "Hari Merdeka"
+
+The obvious tune for a 17 Agustus campaign is **"Hari Merdeka"** — *Tujuh belas
+Agustus tahun empat lima*. What is in `BED_RIFF` is deliberately *not* that song,
+for two reasons worth recording:
+
+**It is in copyright.** H. Mutahar wrote it in 1946 and died in 2004, so under
+UU 28/2014 (life + 70 years) it is protected until roughly 2074. Using it in a
+paid-traffic commercial campaign needs a licence — in Indonesia that means WAMI or
+LMKN. This is routine clearance, not an obstacle, but it is not free and it is not
+automatic just because the song is a national one.
+
+**And a wrong note would be worse than no quote at all.** Every Indonesian player
+knows this melody, so an approximation reads as an error rather than an
+arrangement, and the notation available online could not be verified against a
+source that would reproduce it.
+
+So `BED_RIFF` is an original melody in the same idiom: the rising-fourth opening,
+the dotted march tread, the climb to the fifth and the walk back down. If the
+licence is cleared, swapping the real tune in is `BED_RIFF` and `BED_BASS` and
+nothing else in the file.
 
 The drum loop is 2 bars where the melody is 4. It is a drum pattern whose only
 variation was the fill, and 3.0 s divides 6.0 s exactly, so the two stay
@@ -316,16 +341,22 @@ load time is the funnel. What the synthesised set actually encodes to:
 | | |
 | --- | --- |
 | `sfx.m4a` — 15 cues, 8.0 s, q60 | 60.9 KB |
+| `bed.m4a` — 12 s, q40 | 57.6 KB |
 | `hook.m4a` — 6 s, q55 | 44.1 KB |
 | `crowd.m4a` — 6 s, q35 | 31.5 KB |
 | `payoff.m4a` — 4 s, q55 | 30.7 KB |
-| `bed.m4a` — 6 s, q45 | 24.3 KB |
 | `pulse.m4a` — 3 s, q70 | 23.0 KB |
-| **Total** | **214.5 KB** |
+| **Total** | **247.7 KB** |
 
-That is 7% over the 200 KB target, which I have left standing rather than quietly moving:
-it is the number to argue against when the next cue gets added. The overrun is the `lead`
-cue, and it buys the third silent gap.
+That is 24% over the 200 KB target. The target was set before the menus had a tune, and
+a 12-second melody costs ~34 KB more than the 4-bar ostinato it replaced — a fair trade,
+but it is a trade, so the number stays at 200 rather than being quietly moved to match.
+It is what the next addition has to argue against.
+
+If the bytes are needed back, the cheapest 24 KB is halving `bed` to 4 bars; the next
+cheapest is trimming `crowd` to 4 s, which is imperceptible at −26 dBFS under a kendang.
+Note also that VBR quality is not a smooth dial — `bed` encodes to the same size at q35
+and q40, so q40 is free.
 
 The first pass came in at **491 KB**, and only one of the three fixes was about bitrate.
 Shipping `roar` and `win` at all was redundant — `sfx_win()` already mixes `sfx_roar()`
