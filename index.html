@@ -141,6 +141,34 @@
   .btn.ghost:active{box-shadow:0 0 0 #b99a6a}
   .row{display:flex;gap:clamp(8px,1.8vmin,16px);flex-wrap:wrap;justify-content:center}
 
+  /* ---------------------------------------------------- email / lead capture */
+  .email-card{width:min(92vw,520px);padding:clamp(18px,3.4vmin,32px);border-radius:10px;
+              display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.6vmin,14px)}
+  /* not .display: the white outline is there to lift text off the busy photo
+     backdrop, and on the gold card it just muddies the letterforms */
+  .email-card h2{font-size:clamp(20px,4vmin,36px);color:var(--merah);text-transform:uppercase;
+                 line-height:1.05;text-shadow:0 .06em 0 rgba(104,80,32,.25)}
+  .email-sub{color:var(--ink);font-weight:600;font-size:clamp(12px,2.1vmin,17px);text-align:center}
+  #email-form{display:flex;flex-direction:column;gap:clamp(8px,1.6vmin,14px);width:100%;align-items:stretch}
+  #email-input{font:inherit;font-weight:600;font-size:clamp(15px,2.4vmin,20px);color:var(--ink);
+               padding:clamp(10px,1.9vmin,16px) clamp(12px,2.2vmin,18px);
+               border:3px solid var(--putih);border-radius:7px;background:rgba(255,255,255,.92);
+               box-shadow:inset 0 2px 0 rgba(104,80,32,.18);width:100%;text-align:center}
+  #email-input::placeholder{color:#a08a63;font-weight:600}
+  #email-input:focus{outline:0;border-color:var(--merah);background:#fff}
+  #email-input.bad{border-color:var(--merah);background:#fff2f2}
+  #btn-email[disabled]{opacity:.6;cursor:progress}
+  .email-note{min-height:1.4em;font-weight:600;text-align:center;
+              font-size:clamp(11px,1.9vmin,15px);color:#7a5a2c}
+  .email-note.bad{color:var(--merah-tua)}
+
+  /* the payoff line on the results card */
+  #prize{margin-top:.7em;padding-top:.7em;border-top:3px dashed rgba(104,80,32,.35);text-align:center}
+  #prize span{display:block;color:#7a5a2c;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+              font-size:clamp(9px,1.5vmin,12px)}
+  #prize b{display:block;margin-top:.25em;color:var(--merah);line-height:1.15;
+           font-size:clamp(15px,2.6vmin,23px)}
+
   /* ---- picker: a slider, one racer at a time, neighbours peeking in ------ */
   /* the hero portraits are bust-length and much taller than they are wide, so
      the frame is roomier than it was for the full-body vector sprites */
@@ -202,10 +230,12 @@
              width:clamp(38px,6vw,116px);height:auto;pointer-events:none;
              filter:drop-shadow(0 2px 5px rgba(90,10,14,.3))}
   #stage.racing #brandmark{display:none}
-  #mute{position:absolute;top:clamp(8px,1.6vmin,16px);right:clamp(8px,1.6vmin,16px);z-index:400;border:0;cursor:pointer;
-        background:var(--putih);color:var(--merah);border-radius:999px;
-        width:clamp(32px,5vmin,44px);height:clamp(32px,5vmin,44px);
-        font-size:clamp(15px,2.4vmin,21px);line-height:1;box-shadow:0 3px 0 rgba(104,80,32,.5)}
+  /* red disc with a white keyline — the same pill language as the drawn HUD */
+  #mute{position:absolute;top:clamp(8px,1.6vmin,16px);right:clamp(8px,1.6vmin,16px);z-index:400;cursor:pointer;
+        background:#c9171e;color:var(--putih);border:3px solid var(--putih);border-radius:999px;
+        width:clamp(34px,5vmin,46px);height:clamp(34px,5vmin,46px);
+        font-size:clamp(15px,2.4vmin,21px);line-height:1;box-shadow:0 3px 0 rgba(112,10,14,.55)}
+  #stage.racing #mute{box-shadow:0 3px 0 rgba(112,10,14,.75)}
   /* no "please rotate your phone" nag: portrait letterboxes the race instead */
   .fade{animation:fade .35s ease both}
   @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -232,10 +262,23 @@
         </div>
         <div class="cta">
           <button class="btn merah" id="btn-play">Mulai</button>
-          <p class="hint">Ketuk layar / tekan SPASI untuk melompat</p>
+          <p class="hint">Tap layar / tekan SPASI untuk melompat</p>
         </div>
       </div>
       <img class="ad-hero" src="sprites/adik_hero.png" alt="">
+    </div>
+  </div>
+
+  <div class="layer" id="scr-email">
+    <div class="badge email-card">
+      <h2>Satu langkah lagi</h2>
+      <p class="email-sub">Masukkan email untuk mengunci hadiahmu</p>
+      <form id="email-form" novalidate>
+        <input id="email-input" type="email" inputmode="email" autocomplete="email"
+               spellcheck="false" placeholder="nama@email.com" aria-label="Alamat email" required>
+        <button class="btn merah" id="btn-email" type="submit">Lanjut</button>
+      </form>
+      <p class="email-note" id="email-note" role="status"></p>
     </div>
   </div>
 
@@ -260,6 +303,7 @@
     <div id="results" class="badge fade">
       <div class="verdict display" id="verdict"></div>
       <div id="board"></div>
+      <div id="prize"><span>Hadiahmu</span><b id="prize-text"></b></div>
     </div>
     <div class="row">
       <button class="btn" id="btn-again">Main Lagi</button>
@@ -313,21 +357,78 @@ const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const lerp  = (a,b,t) => a + (b-a) * t;
 const rnd   = (a,b) => a + Math.random() * (b-a);
 
+/* ---------------------------------------------- campaign variant + lead capture */
+
+/* Paste the Apps Script web app /exec URL here — see tools/apps-script/Code.gs.
+   Left empty the game still plays, but it draws the prize locally: nothing is
+   recorded and one-play-per-email is not enforced. Fine for development, never
+   for a live campaign. */
+const LEAD_ENDPOINT = "https://script.google.com/macros/s/AKfycbyFxWRm-h0KbJyovYh2DoTkdkIviHLfK0Lt__5QvCKA0NbTwcm3XCeqipFPAXH7lYGZQA/exec";
+
+/* /swe serves the SWE prize table, everything else DA. The host rewrites /swe/*
+   to this same file (see README > Variants), so the path is the only signal. */
+const VARIANT = /(^|\/)swe(\/|$)/i.test(location.pathname) ? "swe" : "da";
+
+/* Development mirror of the table in Code.gs, used only when LEAD_ENDPOINT is
+   empty. Code.gs is the source of truth — the live page never sees the weights. */
+const DEV_PRIZES = {
+  da: [
+    ["Early Bird 2 juta + BNSP + Exclusive Starter Kit", 30],
+    ["Early Bird 2 juta + BNSP", 40],
+    ["Early Bird 2 juta + BNSP + Exclusive AI Class Library", 30],
+  ],
+  swe: [
+    ["Early Bird 3.5 juta + 1.5 juta", 10],
+    ["Early Bird 3.5 juta + 1 juta", 70],
+    ["Early Bird 3.5 juta + 500rb", 20],
+  ],
+};
+
+let prize = "";        // decided once, at the email step, before the race starts
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+
+function devDraw(){
+  const table = DEV_PRIZES[VARIANT];
+  const total = table.reduce((n, p) => n + p[1], 0);
+  let roll = Math.random() * total;
+  for(const [label, w] of table){ roll -= w; if(roll < 0) return label; }
+  return table[table.length - 1][0];
+}
+
+/* Apps Script answers a plain POST but not a preflighted one, so this sends the
+   body as text/plain — a "simple" request the browser issues without an OPTIONS
+   round trip. The email therefore never appears in a URL or a server log line. */
+async function claimPrize(email){
+  if(!LEAD_ENDPOINT) return { ok: true, prize: devDraw(), returning: false, dev: true };
+  const res = await fetch(LEAD_ENDPOINT, {
+    method: "POST",
+    body: JSON.stringify({ email, variant: VARIANT, source: location.pathname }),
+  });
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
 const cv = document.getElementById("game");
 const ctx = cv.getContext("2d");
 let W = 1280, H = 720, SS = 720, dpr = 1;   // SS = scene scale, keeps portrait sane
+let GY = 600, PITCH = 65;         // ground line and lane spacing, world px
 
 /* The race is a horizontal chase, so a tall viewport spends its height on sky
-   while hiding the track the drama actually lives on: fitting 1280x720 of world
-   into a 9:16 frame leaves only ~560 world px across, not enough to see the pack.
-   So anything narrower than BAND_ASPECT gets the race letterboxed into a band,
-   and the strips left over become the HUD and the thumb zone. */
+   while hiding the track the drama actually lives on. Anything narrower than
+   BAND_ASPECT gets the race banded, and the strips left over become the HUD
+   and the thumb zone — a slim bar above, a control panel below, exactly the
+   proportions the ad creative frames its scenes with. */
 const BAND_ASPECT = 1.5;
+const TOPBAR  = 92;               // design px of HUD above the band
+const THUMB   = .27;              // share of the viewport the tap panel takes
+const CAM_HOLD = .50;             // where the camera parks the player across the frame
 let SW = 0, SH = 0;               // viewport, CSS px
 let bandTop = 0, bandH = 0;       // the race band on screen, CSS px (always full width)
 let letterboxed = false;
 let HS = 1;                       // HUD scale — CSS px per design px
 let safeT = 0, safeB = 0;         // notch / home-indicator insets, CSS px
+let muteReserve = 56;             // width the DOM mute button claims on the right
 
 // env() does not resolve through getComputedStyle on a custom property, so read
 // it off an element that actually applies it
@@ -348,21 +449,39 @@ function resize(){
   SW = r.width; SH = r.height;
   readInsets();
 
-  bandH = Math.min(SH, SW / BAND_ASPECT);
-  letterboxed = bandH < SH - 1;
-  // dock the band high — the strip above takes the HUD, and everything below it
-  // is thumb country on a phone held one-handed
-  const strip = Math.max(0, SH - bandH);
-  bandTop = letterboxed ? Math.max(Math.min(strip, 104 + safeT), strip * .3) : 0;
+  letterboxed = SH > SW / BAND_ASPECT + 1;
+  HS = letterboxed ? clamp(SW / 520, .6, 1.1) : 1;
+  if(letterboxed){
+    // the strips are budgeted, not left over: the HUD gets exactly its bar and
+    // the thumb panel its share, and the scene keeps everything in between
+    bandTop = Math.min(SH * .18, TOPBAR * HS + safeT);
+    // the tap panel is capped rather than handed the leftovers: it only needs
+    // room for the button and its caption, and every pixel past that is scene
+    const thumb = clamp(SH * THUMB, 150 * HS, 260) + safeB;
+    bandH = clamp(SH - bandTop - thumb, SH * .34, SW / .70);
+  } else {
+    bandTop = 0; bandH = SH;
+  }
 
   // ~1280x720 of world space across the band; wider bands zoom out no further,
   // narrower ones zoom in rather than letting the view grow endlessly tall
   W = clamp(Math.round(720 * SW / bandH), 560, 1280);
   H = Math.round(W * bandH / SW);
-  SS = Math.min(H, W * .65);
-  // docked chrome is sized against the viewport, not the band: band-relative
-  // sizes would render it postage-stamp small inside a short letterbox strip
-  HS = letterboxed ? clamp(SW / 520, .6, 1.1) : (SS / 720) * (SW / W);
+  // On a tall band the limit is the width, not the height. Holding the scene to
+  // .65 of it left the racers at ~13% of the frame where the reference art puts
+  // them at ~22%, so the whole scene read as distant.
+  SS = Math.min(H, W * .92);
+  // A tall band would otherwise be two thirds sky: stretch the lane stack until
+  // the horizon sits about 42% down the frame, the way the reference art does.
+  GY = Math.min(H - SS * .06, H * .84);
+  PITCH = clamp((GY - H * .42 - SS * .085) / 3, SS * .09, SS * .14);
+  // full-screen, the chrome is sized against the band it floats on; banded, it
+  // is sized against the viewport, or it would be postage-stamp small
+  if(!letterboxed) HS = (SS / 720) * (SW / W);
+  // the HUD row has to stop clear of the mute button, which is DOM and sizes
+  // itself off the viewport — measure it here rather than guessing per frame
+  const mr = document.getElementById("mute").getBoundingClientRect();
+  muteReserve = mr.width ? (SW - mr.left) + 10 : 56;
 
   bandSpace();
 }
@@ -374,7 +493,7 @@ function screenSpace(){ ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
 
 const $ = id => document.getElementById(id);
 const show = id => {
-  ["scr-title","scr-select","scr-race","scr-done"].forEach(s => $(s).classList.toggle("on", s === id));
+  ["scr-title","scr-email","scr-select","scr-race","scr-done"].forEach(s => $(s).classList.toggle("on", s === id));
   $("tapzone").classList.toggle("on", id === "scr-race");
   // the logo shares the top-left corner with the race HUD, so it steps aside
   $("stage").classList.toggle("racing", id === "scr-race");
@@ -522,8 +641,9 @@ function step(dt){
     }
   }
 
-  // camera: keeps the player a third of the way in, stops at the finish gate
-  const target = clamp(racers[0].x - W * .32, CAM_MIN, RACE_LEN + RUNOUT - W);
+  // camera: parks the player mid-frame so the pack fans out behind him and
+  // whoever is leading fills the right of the shot, then stops at the finish gate
+  const target = clamp(racers[0].x - W * CAM_HOLD, CAM_MIN, RACE_LEN + RUNOUT - W);
   camX = lerp(camX, target, 1 - Math.pow(.0009, dt));
 
   for(let i = puffs.length - 1; i >= 0; i--){
@@ -541,107 +661,225 @@ function step(dt){
 
 /* ------------------------------------------------------------------ drawing */
 
-const ground = () => Math.min(H - SS * .06, H * .84);
-function laneY(lane){ return ground() - lane * (SS * .09); }
+const ground = () => GY;
+function laneY(lane){ return GY - lane * PITCH; }
 function laneScale(lane){ return 1 - lane * .07; }
-function laneOff(lane){ return lane * 55 * (SS / 720); }   // far lanes sit further left
+/* Far lanes sit up AND to the left. The sideways step is the larger of the two,
+   so the pack fans diagonally across the frame instead of stacking upward. */
+function laneOff(lane){ return lane * PITCH * 1.05; }
 const horizon = () => laneY(3) - SS * .085;
 
 function drawSky(){
-  const g = ctx.createLinearGradient(0, 0, 0, horizon());
-  g.addColorStop(0, "#63bce8"); g.addColorStop(.65, "#a8dcf2"); g.addColorStop(1, "#e2f2e0");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizon() + 2);
+  const hz = horizon();
+  const g = ctx.createLinearGradient(0, 0, 0, hz);
+  g.addColorStop(0, "#4fb2e6"); g.addColorStop(.58, "#93d5f2"); g.addColorStop(1, "#d9eff5");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, hz + 2);
 
-  ctx.fillStyle = "rgba(255,244,190,.95)";
-  ctx.beginPath(); ctx.arc(W * .82, horizon() * .28, SS * .062, 0, 7); ctx.fill();
+  // sun: a soft halo under a flat disc, the way the ad art lights its corners
+  const sx = W * .84, sy = hz * .26, sr = SS * .058;
+  const halo = ctx.createRadialGradient(sx, sy, sr * .7, sx, sy, sr * 2.7);
+  halo.addColorStop(0, "rgba(255,232,130,.5)"); halo.addColorStop(1, "rgba(255,232,130,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(sx, sy, sr * 2.7, 0, 7); ctx.fill();
+  ctx.fillStyle = "#ffe463";
+  ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.45)";
+  ctx.beginPath(); ctx.arc(sx - sr * .26, sy - sr * .26, sr * .6, 0, 7); ctx.fill();
 
-  ctx.fillStyle = "rgba(255,255,255,.85)";
-  for(let i = 0; i < 7; i++){
-    const cx = ((i * 430 - camX * .18) % (W + 700) + W + 700) % (W + 700) - 250;
-    const cy = horizon() * (.14 + (i % 3) * .12), s = SS * (.028 + (i % 2) * .012);
-    ctx.beginPath();
-    ctx.arc(cx, cy, s, 0, 7); ctx.arc(cx + s * 1.1, cy + s * .2, s * .78, 0, 7);
-    ctx.arc(cx - s * 1.05, cy + s * .25, s * .66, 0, 7); ctx.fill();
-  }
-}
-
-function drawHills(){
-  const base = horizon() + 8;
-  ctx.fillStyle = "#7fb98a";
+  // clouds: lobes over a flat base, so they read as cut-out shapes and not blobs.
+  // Spacing is derived from the world width — a fixed pitch left a narrow band
+  // with two clouds and a lot of bare blue.
+  const span = W + 500, pitch = span / 9;
   for(let i = 0; i < 9; i++){
-    const cx = ((i * 340 - camX * .35) % 3060 + 3060) % 3060 - 400;
-    ctx.beginPath();
-    ctx.moveTo(cx - 260, base); ctx.quadraticCurveTo(cx, base - SS * .17, cx + 260, base); ctx.fill();
-  }
-  ctx.fillStyle = "#69a878";
-  for(let i = 0; i < 7; i++){
-    const cx = ((i * 470 - camX * .45) % 3290 + 3290) % 3290 - 400;
-    ctx.beginPath();
-    ctx.moveTo(cx - 300, base); ctx.quadraticCurveTo(cx, base - SS * .1, cx + 300, base); ctx.fill();
-  }
-}
-
-function tree(x, y, s){
-  ctx.fillStyle = "#8a6a4a";
-  ctx.fillRect(x - 4 * s, y - 26 * s, 8 * s, 26 * s);
-  ctx.fillStyle = "#4f9c5c";
-  ctx.beginPath(); ctx.arc(x, y - 40 * s, 20 * s, 0, 7);
-  ctx.arc(x - 16 * s, y - 30 * s, 14 * s, 0, 7); ctx.arc(x + 16 * s, y - 31 * s, 15 * s, 0, 7); ctx.fill();
-}
-
-function drawCrowd(){
-  const y = horizon() + 14, s = SS / 720;
-  for(let i = 0; i < 26; i++){
-    const wx = i * 190 + 60;
-    const x = wx - camX * .62;
-    if(x < -80 || x > W + 80) continue;
-    if(i % 4 === 0){ tree(x, y, s * 1.15); continue; }
-    // little onlookers in red & white
-    for(let k = 0; k < 3; k++){
-      const px = x + k * 22 * s, ph = (16 + (i + k) % 5 * 3) * s;
-      ctx.fillStyle = (i + k) % 2 ? "#d8232a" : "#fdfaf5";
-      ctx.fillRect(px, y - ph, 12 * s, ph);
-      ctx.fillStyle = "#f0c39a";
-      ctx.beginPath(); ctx.arc(px + 6 * s, y - ph - 6 * s, 6 * s, 0, 7); ctx.fill();
-      ctx.fillStyle = "#2b2118";
-      ctx.beginPath(); ctx.arc(px + 6 * s, y - ph - 8 * s, 6 * s, Math.PI, 0); ctx.fill();
+    const cx = ((i * pitch - camX * .18) % span + span) % span - 250;
+    const cy = hz * (.14 + (i % 4) * .13), s = SS * (.030 + (i % 3) * .011);
+    for(const [col, dy] of [["rgba(206,232,245,.9)", s * .1], ["#ffffff", 0]]){
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(cx, cy + dy, s, 0, 7);
+      ctx.arc(cx + s * 1.02, cy + dy + s * .3, s * .7, 0, 7);
+      ctx.arc(cx - s * .98, cy + dy + s * .34, s * .62, 0, 7);
+      ctx.arc(cx + s * .46, cy + dy - s * .4, s * .56, 0, 7);
+      ctx.fill();
+      // one flat base tucked inside the lobes, so the silhouette sits level
+      ctx.fillRect(cx - s * 1.55, cy + dy + s * .28, s * 3.1, s * .66);
     }
   }
 }
 
-function drawBunting(){
-  const s = SS / 720, span = 96 * s, top = Math.max(SS * .02, horizon() * .12);
-  ctx.strokeStyle = "rgba(60,40,30,.55)"; ctx.lineWidth = 2 * s;
-  ctx.beginPath();
-  for(let x = -span; x < W + span; x += span){
-    const off = -((camX * .8) % span);
-    ctx.moveTo(x + off, top); ctx.quadraticCurveTo(x + off + span / 2, top + 16 * s, x + off + span, top);
+/* Festival confetti drifting through the sky band — the one piece of motion the
+   backdrop had none of, and the thing that ties the race to the title art. */
+const KONFETI = [KUNING_2, PUTIH, MERAH, "#4aa3e0"];
+function drawConfetti(){
+  const s = SS / 720, hz = horizon(), span = W + 320, fall = hz * 1.05;
+  ctx.save();
+  ctx.globalAlpha = .9;
+  for(let i = 0; i < 30; i++){
+    const seed = i * 137.5;
+    const drift = Math.sin(anim * .6 + i) * 26 * s;
+    const x = ((seed * 7.3 - camX * .22 + drift) % span + span) % span - 160;
+    const y = ((seed * 3.1 + anim * (14 + (i % 4) * 8)) % fall + fall) % fall;
+    const w = (7 + (i % 3) * 3) * s;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(anim * (1.1 + (i % 3) * .45) + i);
+    ctx.fillStyle = KONFETI[i % KONFETI.length];
+    if(i % 3 === 0){                       // a few diamonds among the ribbons
+      ctx.beginPath();
+      ctx.moveTo(0, -w * .6); ctx.lineTo(w * .45, 0); ctx.lineTo(0, w * .6); ctx.lineTo(-w * .45, 0);
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillRect(-w / 2, -w * .3, w, w * .6);
+    }
+    ctx.restore();
   }
-  ctx.stroke();
-  let i = Math.floor(camX * .8 / span);
-  for(let x = -span; x < W + span; x += span, i++){
-    const off = -((camX * .8) % span), fx = x + off + span / 2;
-    ctx.fillStyle = i % 2 ? MERAH : PUTIH;
-    ctx.beginPath();
-    ctx.moveTo(fx - 15 * s, top + 8 * s); ctx.lineTo(fx + 15 * s, top + 8 * s); ctx.lineTo(fx, top + 42 * s);
-    ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawHills(){
+  const base = horizon() + 8;
+  // far to near: lighter and taller behind, darker and flatter in front
+  const bands = [
+    ["#9ed0a4", 9, 340, 265, .195, .26],
+    ["#7dbb8b", 8, 405, 315, .140, .38],
+    ["#63a672", 7, 470, 360, .092, .50],
+  ];
+  for(const [col, n, sp, wid, ht, par] of bands){
+    ctx.fillStyle = col;
+    const cycle = n * sp;
+    for(let i = 0; i < n; i++){
+      const cx = ((i * sp - camX * par) % cycle + cycle) % cycle - 420;
+      ctx.beginPath();
+      ctx.moveTo(cx - wid, base);
+      ctx.quadraticCurveTo(cx, base - SS * ht, cx + wid, base);
+      ctx.fill();
+    }
   }
 }
 
+function tree(x, y, s){
+  ctx.fillStyle = "#7a5a3c";
+  roundRect(x - 3.5 * s, y - 26 * s, 7 * s, 26 * s, 2 * s); ctx.fill();
+  const blob = (dx, dy, r, col) => {
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, 7); ctx.fill();
+  };
+  blob(0, -42, 21, "#3d8b51"); blob(-17, -31, 15, "#3d8b51"); blob(17, -32, 16, "#3d8b51");
+  blob(-3, -49, 14, "#55a866"); blob(14, -39, 11, "#55a866");
+}
+
+/* One onlooker: a rounded body in red or white, a head with black hair, and
+   arms that go up when they cheer. Kept tiny — they read as a crowd, not faces. */
+function person(x, y, s, i){
+  const h = (17 + (i % 5) * 3) * s, w = 11 * s;
+  const cheer = Math.sin(anim * 3.1 + i * 1.7) > .15;
+  ctx.strokeStyle = "#f0c39a"; ctx.lineWidth = 2.6 * s; ctx.lineCap = "round";
+  ctx.beginPath();
+  if(cheer){
+    ctx.moveTo(x + 1 * s, y - h * .78); ctx.lineTo(x - 4 * s, y - h - 5 * s);
+    ctx.moveTo(x + w - 1 * s, y - h * .78); ctx.lineTo(x + w + 4 * s, y - h - 5 * s);
+  } else {
+    ctx.moveTo(x + 1 * s, y - h * .74); ctx.lineTo(x - 2 * s, y - h * .3);
+    ctx.moveTo(x + w - 1 * s, y - h * .74); ctx.lineTo(x + w + 2 * s, y - h * .3);
+  }
+  ctx.stroke();
+  ctx.fillStyle = i % 2 ? "#d8232a" : "#fdfaf5";
+  roundRect(x, y - h, w, h, w * .4); ctx.fill();
+  ctx.fillStyle = "#f0c39a";
+  ctx.beginPath(); ctx.arc(x + w / 2, y - h - 5 * s, 5.2 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2b2118";
+  ctx.beginPath(); ctx.arc(x + w / 2, y - h - 6.2 * s, 5.2 * s, Math.PI, 0); ctx.fill();
+}
+
+function drawCrowd(){
+  const y = horizon() + 14, s = SS / 720;
+  for(let i = 0; i < 34; i++){
+    const x = i * 150 + 60 - camX * .62;
+    if(x < -90 || x > W + 90) continue;
+    // trees every third slot: a narrow band shows only one or two at a time
+    if(i % 3 === 0){ tree(x, y, s * (i % 2 ? 1.75 : 1.35)); continue; }
+    for(let k = 0; k < 3; k++) person(x + k * 22 * s, y, s, i + k);
+  }
+}
+
+function drawBunting(){
+  // hung a fifth of the way down rather than pinned to the ceiling, so the
+  // bunting sits in the sky instead of leaving a bare gap under it
+  const s = SS / 720, span = 104 * s, top = Math.max(SS * .02, horizon() * .22);
+  const off = -((camX * .8) % span), sag = 18 * s;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  // the rope reads as gold cord over its own soft shadow, not a pencil line
+  for(const [col, dy, lw] of [["rgba(90,40,20,.18)", 3.5 * s, 5 * s], ["#e8b93f", 0, 3.4 * s]]){
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath();
+    for(let x = -span; x < W + span; x += span){
+      ctx.moveTo(x + off, top + dy);
+      ctx.quadraticCurveTo(x + off + span / 2, top + sag + dy, x + off + span, top + dy);
+    }
+    ctx.stroke();
+  }
+
+  let i = Math.floor(camX * .8 / span);
+  for(let x = -span; x < W + span; x += span, i++){
+    const fx = x + off + span / 2, fy = top + sag * .78;
+    const w = 19 * s, hgt = 46 * s;
+    ctx.beginPath();
+    ctx.moveTo(fx - w, fy); ctx.lineTo(fx + w, fy); ctx.lineTo(fx, fy + hgt);
+    ctx.closePath();
+    ctx.fillStyle = i % 2 ? MERAH : PUTIH;
+    ctx.fill();
+    ctx.strokeStyle = i % 2 ? "rgba(255,255,255,.85)" : "rgba(143,20,25,.35)";
+    ctx.lineWidth = 2 * s; ctx.stroke();
+    // a sliver of shade down one edge gives the flag a fold
+    ctx.fillStyle = "rgba(0,0,0,.10)";
+    ctx.beginPath();
+    ctx.moveTo(fx + w * .18, fy); ctx.lineTo(fx + w, fy); ctx.lineTo(fx, fy + hgt);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* the little grass ticks scattered over the turf in the ad art */
+function tuft(x, y, s){
+  ctx.beginPath();
+  ctx.moveTo(x - 4 * s, y); ctx.quadraticCurveTo(x - 3 * s, y - 6 * s, x - 1 * s, y - 7 * s);
+  ctx.moveTo(x + 1 * s, y); ctx.quadraticCurveTo(x + 2 * s, y - 7 * s, x + 4 * s, y - 8 * s);
+  ctx.stroke();
+}
+
 function drawField(){
-  const top = horizon();
+  const top = horizon(), s = SS / 720;
   const g = ctx.createLinearGradient(0, top, 0, H);
-  g.addColorStop(0, "#8dc98a"); g.addColorStop(1, "#5e9e5c");
+  g.addColorStop(0, "#8ecb84"); g.addColorStop(.55, "#6fb469"); g.addColorStop(1, "#54a052");
   ctx.fillStyle = g; ctx.fillRect(0, top, W, H - top);
+
+  // a band of shade right under the hill line, so the turf does not start flat
+  const shade = ctx.createLinearGradient(0, top, 0, top + SS * .07);
+  shade.addColorStop(0, "rgba(46,104,58,.30)"); shade.addColorStop(1, "rgba(46,104,58,0)");
+  ctx.fillStyle = shade; ctx.fillRect(0, top, W, SS * .07);
 
   // lane strips, nearest lane last so it sits on top
   for(let lane = 3; lane >= 0; lane--){
-    const y = laneY(lane), h = SS * .09;
-    ctx.fillStyle = lane % 2 ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.05)";
+    const y = laneY(lane), h = PITCH;
+    ctx.fillStyle = lane % 2 ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.045)";
     ctx.fillRect(0, y - h + 6, W, h);
-    ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,.62)"; ctx.lineWidth = 2.4 * s;
     ctx.beginPath(); ctx.moveTo(0, y + 6); ctx.lineTo(W, y + 6); ctx.stroke();
   }
+
+  // turf detail: fixed to the world, so it scrolls with the track
+  ctx.save();
+  ctx.strokeStyle = "rgba(48,110,56,.42)"; ctx.lineWidth = 2 * s; ctx.lineCap = "round";
+  for(let i = 0; i < 44; i++){
+    const wx = i * 137 + (i % 5) * 23;
+    const x = ((wx - camX) % 6028 + 6028) % 6028 - 300;
+    if(x < -20 || x > W + 20) continue;
+    const lane = i % 4;
+    tuft(x, laneY(lane) - (i % 3) * 9 * s, s * (1 - lane * .07));
+  }
+  ctx.restore();
 
   // distance ticks every 100 world px
   ctx.font = `bold ${Math.round(SS*.021)}px ${FONT}`;
@@ -683,33 +921,86 @@ function drawFinish(){
   if(p.nx < -320 || p.fx > W + 320) return;
   const s = SS / 720;
 
-  // chequered ribbon on the grass
+  // chequered ribbon on the grass: real squares laid along the slant, two rows
+  // deep, rather than one dashed line pretending to be a chequerboard
+  const dx = p.nx - p.fx, dy = p.ny - p.fy;
+  const len = Math.hypot(dx, dy), cell = 9 * s, rows = 2;
   ctx.save();
-  ctx.lineWidth = 11 * s; ctx.lineCap = "butt";
-  ctx.setLineDash([13 * s, 13 * s]);
-  for(const [col, off] of [[PUTIH, 0], [INK, 13 * s]]){
-    ctx.strokeStyle = col; ctx.lineDashOffset = off;
-    ctx.beginPath(); ctx.moveTo(p.fx, p.fy); ctx.lineTo(p.nx, p.ny); ctx.stroke();
+  ctx.translate(p.fx, p.fy); ctx.rotate(Math.atan2(dy, dx));
+  for(let r = 0; r < rows; r++){
+    for(let c = 0; c * cell < len; c++){
+      ctx.fillStyle = (r + c) % 2 ? INK : PUTIH;
+      ctx.fillRect(c * cell, -cell * rows / 2 + r * cell, Math.min(cell, len - c * cell), cell);
+    }
   }
   ctx.restore();
 
-  // gantry: banner slung between a near and a far pole
-  const bh = 68 * s, by = p.fy - 235 * s, bx = p.fx - 26 * s, bw = (p.nx - p.fx) + 52 * s;
-  ctx.fillStyle = "#8a6a4a";
-  ctx.fillRect(p.fx - 6 * s, by + bh, 11 * s, p.fy - by - bh);
-  ctx.fillStyle = "#7d5a3c";
-  ctx.fillRect(p.nx - 8 * s, by + bh * .5, 15 * s, p.ny - by - bh * .5);
-  ctx.fillStyle = MERAH; ctx.fillRect(bx, by, bw, bh * .56);
-  ctx.fillStyle = PUTIH; ctx.fillRect(bx, by + bh * .56, bw, bh * .44);
-  ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
+  /* Gantry, built in perspective. Each pole stands on its OWN end of the finish
+     line — the far one on the far lane, shorter and thinner for the distance —
+     and the board spans their two tops, so it slants and tapers with them
+     instead of hanging as a flat rectangle across a slanted line. */
+  const fs = laneScale(3), ns = laneScale(0);          // depth scale at each end
+  const poleH = 250 * s;
+  const fTop = p.fy - poleH * fs, nTop = p.ny - poleH * ns;
 
+  const pole = (x, base, top, k) => {
+    const w = 15 * s * k;
+    ctx.fillStyle = "#7d5a3c";
+    roundRect(x - w / 2, top, w, base - top, w * .3); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.18)";
+    roundRect(x - w / 2, top, w * .36, base - top, w * .3); ctx.fill();
+    ctx.fillStyle = KUNING_2;                          // gold cap, with a pennant
+    ctx.beginPath(); ctx.arc(x, top - 3 * s * k, 6 * s * k, 0, 7); ctx.fill();
+    ctx.fillStyle = MERAH;
+    ctx.beginPath();
+    ctx.moveTo(x, top - 9 * s * k);
+    ctx.lineTo(x + 32 * s * k, top - 1 * s * k);
+    ctx.lineTo(x, top + 7 * s * k);
+    ctx.closePath(); ctx.fill();
+  };
+  pole(p.fx, p.fy, fTop, fs);                          // far first: the near one
+  pole(p.nx, p.ny, nTop, ns);                          // reads as being in front
+
+  // the board hangs a little below the caps, so the pennants stay clear of it
+  const ax = p.fx, ay = fTop + 34 * s * fs;
+  const bx = p.nx, by = nTop + 34 * s * ns;
+  const blen = Math.hypot(bx - ax, by - ay);
+  const over = 24 * s;                                 // overhang past each pole
+  const x0 = -over, x1 = blen + over;
+  const hf = 34 * s * fs, hn = 34 * s * ns;            // half-height at each end
+  const h0 = lerp(hf, hn, x0 / blen), h1 = lerp(hf, hn, x1 / blen);
+
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(Math.atan2(by - ay, bx - ax));
+  // one trapezoid, offset for the shadow and inset for the keyline
+  const slab = (d, dy) => {
+    ctx.beginPath();
+    ctx.moveTo(x0 + d, -h0 + d + dy); ctx.lineTo(x1 - d, -h1 + d + dy);
+    ctx.lineTo(x1 - d, h1 - d + dy); ctx.lineTo(x0 + d, h0 - d + dy);
+    ctx.closePath();
+  };
+  ctx.fillStyle = EMAS_BAYANG; slab(0, 7 * s); ctx.fill();
+  ctx.fillStyle = PUTIH;       slab(0, 0);     ctx.fill();
+  ctx.save();
+  slab(5 * s, 0); ctx.clip();
+  ctx.fillStyle = MERAH; slab(0, 0); ctx.fill();       // red field…
+  ctx.fillStyle = KUNING_2;                            // …with a gold lower band
+  ctx.beginPath();
+  ctx.moveTo(x0, h0 * .16); ctx.lineTo(x1, h1 * .16);
+  ctx.lineTo(x1, h1); ctx.lineTo(x0, h0);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  const k = (fs + ns) / 2, hm = (h0 + h1) / 2;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = KUNING_2;
-  ctx.font = `bold ${Math.round(34*s)}px ${FONT}`;
-  ctx.fillText("FINIS", bx + bw / 2, by + bh * .29);
+  ctx.font = `bold ${Math.round(34 * s * k)}px ${FONT}`;
+  ctx.fillText("FINISH", blen / 2, -hm * .34);
   ctx.fillStyle = MERAH;
-  ctx.font = `bold ${Math.round(20*s)}px ${FONT}`;
-  ctx.fillText("17 AGUSTUS", bx + bw / 2, by + bh * .79);
+  ctx.font = `bold ${Math.round(19 * s * k)}px ${FONT}`;
+  ctx.fillText("17 AGUSTUS", blen / 2, hm * .55);
+  ctx.restore();
   ctx.textBaseline = "alphabetic";
 }
 
@@ -726,7 +1017,9 @@ function drawRacer(r){
   const key = CHARS[r.ci].id + "_" + poseOf(r);
   const im = img[key];
   const sc = laneScale(r.lane), base = laneY(r.lane);
-  const h = SS * .215 * sc;
+  // on a tall band the lanes are spread wide, so the racers grow with the pitch
+  // rather than staying pinned to the scene scale and rattling around in it
+  const h = Math.max(SS * .215, PITCH * 1.25) * sc;
   const w = im ? im.width / im.height * h : h * .4;
   const x = r.x - camX - laneOff(r.lane), y = base - r.y * sc;
 
@@ -761,9 +1054,31 @@ function drawPuffs(){
   }
 }
 
+/* A hedge of rounded lumps, the shape the ad art frames its bottom corners with.
+   Two tones: the mass, then a lighter crown catching the light. */
+function bush(x, y, s){
+  const lobes = [[-34, 4, 19], [-15, -7, 23], [8, -10, 21], [30, 2, 17], [0, 6, 22]];
+  ctx.fillStyle = "#276a34";
+  ctx.beginPath();
+  for(const [lx, ly, lr] of lobes) ctx.arc(x + lx * s, y + ly * s, lr * s, 0, 7);
+  ctx.fill();
+  // a thin lit crown, not a second bush — otherwise it reads as a green cloud
+  ctx.save();
+  ctx.beginPath();
+  for(const [lx, ly, lr] of lobes) ctx.arc(x + lx * s, y + ly * s, lr * s, 0, 7);
+  ctx.clip();
+  ctx.fillStyle = "#37853f";
+  ctx.beginPath();
+  for(const [lx, ly, lr] of lobes) ctx.arc(x + lx * s, y + (ly - 5) * s, lr * .92 * s, 0, 7);
+  ctx.fill();
+  ctx.restore();
+}
+
 // near bank of grass in front of the track, for depth
 function drawForeground(){
-  const s = SS / 720, top = Math.max(laneY(0) + 34 * s, H - 90 * s);
+  // a thin bank: the reference runs its track to the bottom edge, so this is
+  // only enough to close the frame, not a second field
+  const s = SS / 720, top = Math.max(laneY(0) + 26 * s, H - 62 * s);
   if(top >= H) return;
   const shift = -((camX * 1.18) % 160);
 
@@ -781,17 +1096,20 @@ function drawForeground(){
   ctx.fillStyle = g; ctx.fill();
 
   ctx.clip();
-  ctx.fillStyle = "rgba(46,100,50,.75)";
-  for(let i = 0; i < 70; i++){
-    const wx = i * 58 + (i % 7) * 9;
-    const x = ((wx - camX * 1.18) % 4060 + 4060) % 4060 - 260;
+  // bushes are sunk into the bank so only their crowns show, and spaced out —
+  // a solid hedge would read as a wall across the bottom of the frame
+  for(let i = 0; i < 14; i++){
+    const wx = i * 430 + (i % 4) * 95;
+    const x = ((wx - camX * 1.18) % 6020 + 6020) % 6020 - 340;
+    if(x < -180 || x > W + 180) continue;
+    bush(x, top + (34 + (i % 3) * 7) * s, s * (.78 + (i % 4) * .17));
+  }
+  ctx.strokeStyle = "rgba(38,92,44,.65)"; ctx.lineWidth = 2.2 * s; ctx.lineCap = "round";
+  for(let i = 0; i < 46; i++){
+    const wx = i * 88 + (i % 7) * 13;
+    const x = ((wx - camX * 1.18) % 4048 + 4048) % 4048 - 260;
     if(x < -30 || x > W + 30) continue;
-    const h = (13 + (i % 4) * 7) * s, yb = top + (2 + (i % 3) * 7) * s;
-    ctx.beginPath();
-    ctx.moveTo(x - 5 * s, yb);
-    ctx.quadraticCurveTo(x - 1 * s, yb - h, x + 6 * s, yb - h * .8);
-    ctx.quadraticCurveTo(x + 1 * s, yb - h * .35, x + 5 * s, yb);
-    ctx.closePath(); ctx.fill();
+    tuft(x, top + (8 + (i % 3) * 8) * s, s * 1.35);
   }
   ctx.restore();
 }
@@ -816,88 +1134,227 @@ function badgePanel(x, y, w, h, r){
   roundRect(x + b, y + b, w - b * 2, h - b * 2, Math.max(1, r - b)); ctx.fill();
 }
 
-/* Docked chrome — place/time/combo and the progress rail. Drawn in screen pixels
-   at HS, so on a letterboxed phone it fills the strip above the band instead of
-   shrinking with it. Full-screen layout is unchanged: panel top-left, rail
-   centred beside it. Letterboxed, the two stack, because a 168px panel and a
-   centred rail collide once the viewport is only ~375px wide. */
-function drawDock(){
-  const me = racers[0], s = HS, pad = 20 * s;
-  // a shallow letterbox has no room to stack, so fall back to the overlay layout
-  const stacked = letterboxed && bandTop >= 118 * s;
-  const top = stacked ? Math.max(safeT + 8, (bandTop - 125 * s) / 2) : pad;
-  const panelY = stacked ? top + 25 * s : top - 6 * s;
+/* ---- chrome ---------------------------------------------------------------
+   The band is framed by two solid red panels, the way every screen in the ad
+   creative is: the strip above carries the HUD as separate pills, the strip
+   below is one big control surface. Everything here is drawn in screen pixels
+   at HS, so it fills the letterbox instead of shrinking with the band. */
 
-  // stacked, the rail runs nearly full width but stops clear of the mute button
-  const rw = stacked ? SW - 112 * s : SW * .46;
-  const rx = stacked ? 20 * s : (SW - rw) / 2;
-  const ry = stacked ? top : top + 6 * s;
-  const rh = 16 * s;
-  ctx.fillStyle = "rgba(104,80,32,.55)"; roundRect(rx, ry + 4 * s, rw, rh, rh / 2); ctx.fill();
-  ctx.fillStyle = PUTIH; roundRect(rx, ry, rw, rh, rh / 2); ctx.fill();
-  ctx.fillStyle = MERAH;
-  roundRect(rx + rw - 6 * s, ry + 3 * s, 4 * s, rh - 6 * s, 2); ctx.fill();
-  for(const r of racers){
-    const t = clamp((r.x - START_X) / (RACE_LEN - START_X), 0, 1);
-    ctx.fillStyle = r.human ? KUNING_2 : "rgba(49,31,23,.32)";
-    ctx.beginPath(); ctx.arc(rx + t * rw, ry + rh / 2, (r.human ? 9 : 5) * s, 0, 7); ctx.fill();
-    if(r.human){ ctx.strokeStyle = MERAH; ctx.lineWidth = 2.5 * s; ctx.stroke(); }
+const MERAH_DALAM = "#c9171e";      // the panel red, a shade under --merah
+
+function redPanel(x, y, w, h, r){
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, "#ea4148"); g.addColorStop(1, MERAH_DALAM);
+  ctx.fillStyle = g;
+  if(r){ roundRect(x, y, w, h, r); ctx.fill(); } else ctx.fillRect(x, y, w, h);
+}
+
+/* the confetti flecks scattered over the red panels in the ad creative */
+function panelFlecks(x, y, w, h){
+  const s = HS, cols = [KUNING_2, PUTIH, "#ff9a9e", "#4aa3e0"];
+  ctx.save();
+  ctx.globalAlpha = .38;
+  for(let i = 0; i < 22; i++){
+    const px = x + ((i * 67) % 100) / 100 * w, py = y + ((i * 43) % 100) / 100 * h;
+    const d = (4 + (i % 3) * 2) * s;
+    ctx.save();
+    ctx.translate(px, py); ctx.rotate(i * 1.13);
+    ctx.fillStyle = cols[i % cols.length];
+    if(i % 3 === 0){
+      ctx.beginPath();
+      ctx.moveTo(0, -d); ctx.lineTo(d * .7, 0); ctx.lineTo(0, d); ctx.lineTo(-d * .7, 0);
+      ctx.closePath(); ctx.fill();
+    } else ctx.fillRect(-d / 2, -d / 3, d, d * .66);
+    ctx.restore();
   }
+  ctx.restore();
+}
 
-  const place = 1 + racers.filter(o => o.x > me.x).length;
-  badgePanel(pad - 10 * s, panelY, 168 * s, (me.combo > 1 ? 100 : 74) * s, 10 * s);
-  ctx.textAlign = "left"; ctx.fillStyle = INK;
-  ctx.font = `bold ${Math.round(34*s)}px ${FONT}`;
-  ctx.fillText(["", "1st", "2nd", "3rd", "4th"][place], pad, panelY + 38 * s);
-  ctx.font = `bold ${Math.round(20*s)}px ${FONT}`;
-  ctx.fillText(clock.toFixed(1) + "s", pad, panelY + 64 * s);
-  if(me.combo > 1){
-    ctx.fillStyle = MERAH;
-    ctx.fillText("Combo x" + me.combo, pad, panelY + 90 * s);
+/* one HUD pill: a seated shadow, the fill, then an optional keyline */
+function chip(x, y, w, h, fill, line){
+  const s = HS;
+  ctx.fillStyle = "rgba(112,10,14,.45)";
+  roundRect(x, y + 3 * s, w, h, h / 2); ctx.fill();
+  ctx.fillStyle = fill;
+  roundRect(x, y, w, h, h / 2); ctx.fill();
+  if(line){
+    ctx.strokeStyle = line; ctx.lineWidth = 2.6 * s;
+    roundRect(x + 1.3 * s, y + 1.3 * s, w - 2.6 * s, h - 2.6 * s, (h - 2.6 * s) / 2);
+    ctx.stroke();
   }
 }
 
-/* A white keyline top and bottom, so the band reads as a deliberate window onto
-   the race rather than a crop that ran out of room. */
-function drawBandFrame(){
-  const k = Math.max(2, 3 * HS);
-  ctx.fillStyle = PUTIH;
-  ctx.fillRect(0, bandTop - k, SW, k);
-  ctx.fillRect(0, bandTop + bandH, SW, k);
-  ctx.fillStyle = EMAS_BAYANG;
-  ctx.fillRect(0, bandTop + bandH + k, SW, k * .8);
-}
-
-/* The strip below the band is thumb country, so it carries the tap target as a
-   full-width control surface rather than a button floating in dead backdrop.
-   It doubles as a rhythm cue: bright the moment the racer lands and is ready for
-   the next hop, dim while airborne or tripped. */
-function drawTapPad(){
+function drawTopBar(){
   const me = racers[0], s = HS;
-  const zone = SH - (bandTop + bandH) - safeB;
+  const h = 38 * s;                                  // pill height
+  // a deep enough letterbox becomes the bar; otherwise the bar floats on the scene
+  const banded = letterboxed && bandTop >= safeT + h + 18 * s;
+  let rowY;
+  if(banded){
+    redPanel(0, 0, SW, bandTop);
+    panelFlecks(0, safeT, SW, bandTop - safeT);
+    ctx.fillStyle = "rgba(120,12,16,.45)";
+    ctx.fillRect(0, bandTop - 3 * s, SW, 3 * s);
+    rowY = safeT + (bandTop - safeT - h) / 2;
+  } else {
+    rowY = safeT + 14 * s;
+    redPanel(10 * s, rowY - 8 * s, SW - muteReserve - 4 * s, h + 16 * s, (h + 16 * s) / 2);
+  }
+
+  const left = (banded ? 14 : 20) * s;
+  const right = SW - muteReserve;
+  const gap = 7 * s;
+  const placeW = 74 * s, timeW = 82 * s;
+  const railW = Math.max(56 * s, right - left - placeW - timeW - gap * 2);
+
+  // place: gold trophy on red, as in the reference
+  const place = 1 + racers.filter(o => o.x > me.x).length;
+  chip(left, rowY, placeW, h, MERAH_DALAM, "rgba(255,222,59,.9)");
+  trophy(left + 18 * s, rowY + h / 2, s * 1.05, "rgba(120,12,16,.8)");
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = PUTIH;
+  ctx.font = `bold ${Math.round(23*s)}px ${FONT}`;
+  ctx.fillText(["", "1st", "2nd", "3rd", "4th"][place], left + 33 * s, rowY + h / 2 + s);
+
+  // time: white pill
+  const tx = left + placeW + gap;
+  chip(tx, rowY, timeW, h, PUTIH, "rgba(143,20,25,.18)");
+  stopwatch(tx + 19 * s, rowY + h / 2, s * 1.05);
+  ctx.fillStyle = INK;
+  ctx.font = `bold ${Math.round(21*s)}px ${FONT}`;
+  ctx.fillText(clock.toFixed(1) + "s", tx + 33 * s, rowY + h / 2 + s);
+
+  // progress: a gold fill running towards a chequered flag
+  const rx = tx + timeW + gap, ip = 5 * s, ih = h - ip * 2, iw = railW - ip * 2;
+  chip(rx, rowY, railW, h, PUTIH, "rgba(143,20,25,.18)");
+  ctx.save();
+  roundRect(rx + ip, rowY + ip, iw, ih, ih / 2); ctx.clip();
+  ctx.fillStyle = "#e7ddc6"; ctx.fillRect(rx + ip, rowY + ip, iw, ih);
+  const t = clamp((me.x - START_X) / (RACE_LEN - START_X), 0, 1);
+  const gg = ctx.createLinearGradient(0, rowY + ip, 0, rowY + ip + ih);
+  gg.addColorStop(0, KUNING_1); gg.addColorStop(1, KUNING_2);
+  ctx.fillStyle = gg;
+  roundRect(rx + ip, rowY + ip, Math.max(ih, t * iw), ih, ih / 2); ctx.fill();
+  for(const r of racers){                            // the pack, as small ticks
+    if(r.human) continue;
+    const rt = clamp((r.x - START_X) / (RACE_LEN - START_X), 0, 1);
+    ctx.fillStyle = "rgba(49,31,23,.30)";
+    ctx.beginPath(); ctx.arc(rx + ip + rt * iw, rowY + h / 2, 3.2 * s, 0, 7); ctx.fill();
+  }
+  const fc = ih / 2;                                 // chequered flag on the end
+  for(let r = 0; r < 2; r++) for(let c = 0; c < 3; c++){
+    ctx.fillStyle = (r + c) % 2 ? INK : "#efe6d2";
+    ctx.fillRect(rx + ip + iw - fc * 3 + c * fc, rowY + ip + r * fc, fc, fc);
+  }
+  ctx.restore();
+
+  // combo hangs under the bar so the row above never reflows mid-race
+  if(me.combo > 1){
+    const cw = 108 * s, ch = 24 * s, cy = (banded ? bandTop : rowY + h + 10 * s) + 8 * s;
+    chip(left, cy, cw, ch, KUNING_2, PUTIH);
+    ctx.textAlign = "center"; ctx.fillStyle = MERAH_TUA;
+    ctx.font = `bold ${Math.round(15*s)}px ${FONT}`;
+    ctx.fillText("COMBO x" + me.combo, left + cw / 2, cy + ch / 2 + s);
+  }
+  ctx.textBaseline = "alphabetic";
+}
+
+/* Two glyphs for the HUD, drawn rather than typed: the emoji the reference
+   leans on render differently on every platform and would break the lockup. */
+function trophy(cx, cy, s, line){
+  ctx.save();
+  ctx.strokeStyle = line || MERAH_TUA; ctx.lineWidth = 2 * s; ctx.lineJoin = "round";
+  ctx.fillStyle = "#ffd23f";
+  ctx.beginPath();                                   // cup
+  ctx.moveTo(cx - 7 * s, cy - 9 * s); ctx.lineTo(cx + 7 * s, cy - 9 * s);
+  ctx.lineTo(cx + 5 * s, cy - 1 * s);
+  ctx.quadraticCurveTo(cx, cy + 3 * s, cx - 5 * s, cy - 1 * s);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath();                                   // handles
+  ctx.arc(cx - 8 * s, cy - 6 * s, 3.4 * s, Math.PI * .5, Math.PI * 1.6);
+  ctx.moveTo(cx + 8 * s + 3.4 * s, cy - 6 * s);
+  ctx.arc(cx + 8 * s, cy - 6 * s, 3.4 * s, Math.PI * 1.4, Math.PI * .5);
+  ctx.stroke();
+  ctx.fillStyle = "#ffd23f";
+  ctx.fillRect(cx - 1.6 * s, cy + 1 * s, 3.2 * s, 4 * s);   // stem
+  roundRect(cx - 5 * s, cy + 5 * s, 10 * s, 3.4 * s, 1.4 * s); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function stopwatch(cx, cy, s){
+  ctx.save();
+  ctx.strokeStyle = MERAH_TUA; ctx.lineWidth = 2 * s; ctx.lineCap = "round";
+  ctx.fillStyle = PUTIH;
+  ctx.beginPath(); ctx.arc(cx, cy + 1 * s, 6.6 * s, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - 2.6 * s, cy - 7.6 * s); ctx.lineTo(cx + 2.6 * s, cy - 7.6 * s);   // crown
+  ctx.moveTo(cx, cy + 1 * s); ctx.lineTo(cx, cy - 2.6 * s);                          // hands
+  ctx.moveTo(cx, cy + 1 * s); ctx.lineTo(cx + 3 * s, cy + 1 * s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* The strip below the band is thumb country, so the whole panel is the control
+   surface: red like the top bar, bushes tucked into its corners, and the gold
+   button sitting on it. The button doubles as a rhythm cue — bright the moment
+   the racer lands and is ready for the next hop, dim while airborne or tripped. */
+function drawBottomBar(){
+  const me = racers[0], s = HS;
+  const top = bandTop + bandH, zone = SH - top;
+  if(zone < 56 * s) return;
+
+  redPanel(0, top, SW, zone);
+  ctx.fillStyle = "rgba(120,12,16,.45)";
+  ctx.fillRect(0, top, SW, 3 * s);
+  panelFlecks(0, top, SW, zone - safeB);
+
+  // the hedge the creative closes every frame with
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, top, SW, zone); ctx.clip();
+  bush(26 * s, SH + 6 * s, s * 1.25);
+  bush(SW - 30 * s, SH + 10 * s, s * 1.5);
+  ctx.restore();
+
   if(zone < 90 * s) return;
   const h = clamp(zone * .34, 76 * s, 150 * s);
   const w = Math.min(SW - 44 * s, 440 * s);
-  const cy = bandTop + bandH + zone * .46;
+  const cy = top + (zone - safeB) * .42;
   const ready = state === "race" && !me.air && me.lock <= 0 && !me.done;
 
   ctx.save();
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.globalAlpha = ready ? 1 : .62;
+  ctx.globalAlpha = ready ? 1 : .68;
   badgePanel((SW - w) / 2, cy - h / 2, w, h, 14 * s);
+  // the gloss the ad's buttons carry across their top third
+  ctx.fillStyle = "rgba(255,255,255,.5)";
+  roundRect((SW - w) / 2 + 16 * s, cy - h / 2 + 12 * s, w * .46, h * .24, h * .12);
+  ctx.fill();
   ctx.fillStyle = INK;
   ctx.font = `bold ${Math.round(42*s)}px ${FONT}`;
-  ctx.fillText(me.done ? "SELESAI" : "KETUK!", SW / 2, cy);
+  ctx.fillText(me.done ? "SELESAI" : "TAP!", SW / 2, cy);
   ctx.restore();
+
+  // the caption the reference carries under its button
+  const capY = cy + h / 2 + 22 * s;
+  if(capY < SH - safeB - 8 * s){
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.round(15*s)}px ${FONT}`;
+    ctx.fillStyle = "rgba(120,12,16,.55)";
+    roundRect(SW / 2 - w * .35, capY - 14 * s, w * .7, 28 * s, 14 * s); ctx.fill();
+    ctx.fillStyle = PUTIH;
+    ctx.fillText("Terus tap untuk melompat!", SW / 2, capY);
+    ctx.restore();
+  }
 }
 
 function drawHud(){
-  if(state === "title" || state === "select" || state === "done") return;
+  if(state === "title" || state === "email" || state === "select" || state === "done") return;
 
   ctx.save();
   screenSpace();
-  if(letterboxed){ drawBandFrame(); drawTapPad(); }
-  drawDock();
+  if(letterboxed) drawBottomBar();
+  drawTopBar();
   ctx.restore();
 
   // the overlays belong on the action, so they stay in band space
@@ -909,13 +1366,33 @@ function drawHud(){
   if(state === "countdown"){
     const n = Math.ceil(countdown);
     const t = 1 - (countdown - Math.floor(countdown));
+    const cy = H * .44;
     ctx.save();
     ctx.globalAlpha = clamp(1.4 - t, 0, 1);
+    // radiating ticks, as in the reference: they pop out as each numeral lands
+    ctx.strokeStyle = PUTIH; ctx.lineCap = "round";
+    ctx.lineWidth = 7 * s;
+    const ry = cy - 40 * s, rIn = (86 + (1 - t) * 30) * s, rOut = rIn + 26 * s;
+    for(let k = -1; k <= 1; k++){
+      for(const dir of [-1, 1]){
+        const a = k * .42;
+        ctx.beginPath();
+        ctx.moveTo(W/2 + dir * Math.cos(a) * rIn, ry + Math.sin(a) * rIn);
+        ctx.lineTo(W/2 + dir * Math.cos(a) * rOut, ry + Math.sin(a) * rOut);
+        ctx.stroke();
+      }
+    }
     ctx.font = `bold ${Math.round((150 + (1-t)*60)*s)}px ${FONT}`;
     ctx.lineJoin = "round";
     ctx.fillStyle = MERAH; ctx.strokeStyle = PUTIH; ctx.lineWidth = 14 * s;
     const txt = n > 0 ? String(n) : "MULAI!";
-    ctx.strokeText(txt, W/2, H * .44); ctx.fillText(txt, W/2, H * .44);
+    ctx.save();
+    ctx.translate(0, 6 * s);
+    ctx.fillStyle = "rgba(90,16,20,.28)";                       // seated shadow
+    ctx.fillText(txt, W/2, cy);
+    ctx.restore();
+    ctx.fillStyle = MERAH;
+    ctx.strokeText(txt, W/2, cy); ctx.fillText(txt, W/2, cy);
     ctx.restore();
   } else if(state === "race" && clock < 1.6 && !letterboxed){
     // letterboxed, the tap pad below the band already says this, permanently
@@ -923,8 +1400,8 @@ function drawHud(){
     ctx.lineJoin = "round";
     ctx.font = `bold ${Math.round(26*s)}px ${FONT}`;
     ctx.fillStyle = MERAH; ctx.strokeStyle = PUTIH; ctx.lineWidth = 5 * s;
-    ctx.strokeText("KETUK! KETUK! KETUK!", W/2, H * .3);
-    ctx.fillText("KETUK! KETUK! KETUK!", W/2, H * .3);
+    ctx.strokeText("TAP! TAP! TAP!", W/2, H * .3);
+    ctx.fillText("TAP! TAP! TAP!", W/2, H * .3);
     ctx.restore();
   }
 
@@ -952,11 +1429,11 @@ function render(){
   ctx.restore();
   // the menus stand on #backdrop, which is behind the canvas — drawing the race
   // underneath them would only cost frames
-  if(state === "title" || state === "select") return;
+  if(state === "title" || state === "email" || state === "select") return;
 
   ctx.save();
   ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();   // keep the scene in its band
-  drawSky(); drawHills(); drawBunting(); drawCrowd();
+  drawSky(); drawHills(); drawBunting(); drawCrowd(); drawConfetti();
   drawField(); drawStartLine(); drawFinish();
   drawPuffs();
   for(let lane = 3; lane >= 0; lane--){
@@ -1105,11 +1582,54 @@ function endRace(){
        <span>${CHARS[r.ci].name}${r.human ? " (kamu)" : ""}</span>
        <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
      </div>`).join("");
+  // everyone who finishes keeps the prize their email drew — placing does not gate it
+  $("prize-text").textContent = prize;
+  $("prize").style.display = prize ? "" : "none";
   meIdx === 0 ? sfxWin() : sfxLose();
   show("scr-done");
 }
 
-$("btn-play").onclick   = () => { beep(660,.1,"square",.06); toSelect(); };
+function toEmail(){
+  state = "email";
+  show("scr-email");
+  $("email-input").focus({ preventScroll: true });
+}
+
+/* The prize is claimed here, before the race, for two reasons: the network round
+   trip hides behind the character picker instead of stalling the payoff, and a
+   failure surfaces while the player has invested nothing. */
+$("email-form").onsubmit = async ev => {
+  ev.preventDefault();
+  const input = $("email-input"), note = $("email-note"), btn = $("btn-email");
+  const email = input.value.trim();
+  note.classList.remove("bad"); input.classList.remove("bad");
+
+  if(!EMAIL_RE.test(email)){
+    input.classList.add("bad"); note.classList.add("bad");
+    note.textContent = "Alamat email belum benar.";
+    input.focus();
+    return;
+  }
+
+  btn.disabled = true;
+  note.textContent = "Mengunci hadiah…";
+  try {
+    const res = await claimPrize(email);
+    if(!res.ok) throw new Error(res.error || "gagal");
+    prize = res.prize;
+    note.textContent = res.returning ? "Email ini sudah pernah main — hadiahmu tetap sama." : "";
+    beep(660,.1,"square",.06);
+    toSelect();
+  } catch (err) {
+    note.classList.add("bad");
+    note.textContent = "Gagal menyimpan. Cek koneksi lalu coba lagi.";
+    console.error("lead capture failed:", err);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$("btn-play").onclick   = () => { beep(660,.1,"square",.06); toEmail(); };
 $("btn-go").onclick     = () => { beep(660,.1,"square",.06); startRace(); };
 $("btn-again").onclick  = () => startRace();
 $("btn-change").onclick = () => toSelect();
