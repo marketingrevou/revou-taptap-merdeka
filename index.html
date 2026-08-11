@@ -181,7 +181,6 @@
            gap:clamp(10px,1.5vw,20px);
            top:calc(clamp(12px,2.6vh,34px) + env(safe-area-inset-top,0px));
            right:clamp(14px,2.8vw,52px)}
-  .sub-nav{display:none;gap:clamp(14px,3vw,22px)}
   /* SVG rather than emoji: an emoji is a colour glyph, so `color` would not
      reach it and each platform would draw a different weight on the disc */
   .gbtn{display:flex;flex-direction:column;align-items:center;gap:.45em;
@@ -230,8 +229,11 @@
                         stroke:rgba(255,255,255,.75);fill:none;stroke-width:2.4;
                         stroke-linecap:round;stroke-linejoin:round}
 
-  /* portrait: the mock's phone layout — wordmark, ribbon, character, CTA riding
-     up over the sack, then the two side buttons, prize bar across the bottom.
+  /* portrait: the mock's phone layout — wordmark, ribbon, character, CTA riding up
+     over the sack, prize bar across the bottom. Both icon buttons stay in the top
+     row here rather than one dropping below the CTA: with only two of them a lone
+     button under MULAI reads as an orphan, and keeping them together means one copy
+     of each in the markup instead of a per-breakpoint duplicate.
      display:contents flattens .title-copy so the hero can be ordered between its
      children; the hero then flex-shrinks, which is what guarantees no overflow
      on a short phone regardless of how the rest of the column measures out. */
@@ -246,17 +248,14 @@
     /* driven by height, not width: vertical room is what is scarce in a phone
        column, and object-fit:contain catches the case where even this has to
        shrink so the character scales instead of stretching */
-    .title-hero{order:3;height:calc(var(--w) * 1.02);width:auto;max-width:100%;
+    .title-hero{order:3;height:calc(var(--w) * 1.18);width:auto;max-width:100%;
                 align-self:center;margin:0;
                 flex:0 1 auto;min-height:0;object-fit:contain;object-position:50% 100%;
                 animation-duration:4.2s}
     .cta{order:4;z-index:2;margin-top:calc(var(--w) * -.12)}
     .pill{font-size:calc(var(--w) * .085);padding:.42em 1.4em}
-    /* the captions are wider than the discs, so the row is spaced off those */
-    .sub-nav{order:5;display:flex;gap:clamp(22px,7vw,34px)}
     #hud-top{top:calc(clamp(8px,1.8vh,16px) + env(safe-area-inset-top,0px));
              right:clamp(10px,3.5vw,18px)}
-    #hud-top .gbtn[data-nav="ranking"],#hud-top .gbtn[data-nav="settings"]{display:none}
     #prize-chip{left:clamp(10px,3.5vw,18px);right:clamp(10px,3.5vw,18px);
                 bottom:calc(clamp(10px,1.8vh,18px) + env(safe-area-inset-bottom,0px));
                 font-size:clamp(13px,3.6vw,17px);padding:.6em .7em}
@@ -291,7 +290,7 @@
   .gbtn:focus-visible{outline:0}
   .gbtn:focus-visible i{outline:3px solid var(--kuning-2);outline-offset:3px}
 
-  /* ------------------------------------------------- hadiah / ranking / setelan */
+  /* -------------------------------------------------- hadiah / pengaturan card */
   /* not routed through show(): these sit *over* whichever screen is up, so the
      title art stays behind them instead of being swapped out */
   #scr-modal{z-index:500;background:rgba(30,8,10,.7);
@@ -314,13 +313,6 @@
   .steps li::before{counter-increment:s;content:counter(s);flex:0 0 auto;
                     display:grid;place-items:center;width:1.7em;height:1.7em;border-radius:999px;
                     background:var(--merah);color:var(--putih);font-size:.82em}
-  .ranklist{display:flex;flex-direction:column;gap:.35em;counter-reset:r}
-  .ranklist li{list-style:none;display:flex;align-items:center;gap:.7em;
-               padding:.45em .7em;border-radius:7px;background:rgba(255,255,255,.55);
-               font-weight:600;font-size:clamp(12px,2.1vmin,17px)}
-  .ranklist li::before{counter-increment:r;content:counter(r);flex:0 0 auto;width:1.6em;
-                       text-align:center;font-weight:700;color:var(--merah)}
-  .ranklist li span{flex:1}
   /* white row, red control: the default gold .btn on the card's own gold gradient
      had almost no edge to it */
   .switch{display:flex;align-items:center;justify-content:space-between;gap:1em;
@@ -465,19 +457,6 @@
         </h1>
         <p class="ribbon"><i>★</i><span>Tap secepat mungkin dan raih skor tertinggi!</span><i>★</i></p>
         <div class="cta"><button class="pill" id="btn-play">Mulai</button></div>
-        <!-- ranking and pengaturan ride in the top row on desktop and down here on
-             a phone; only one copy of each is ever displayed, and the click handler
-             is delegated off data-nav so neither needs its own binding -->
-        <div class="sub-nav">
-          <button class="gbtn" data-nav="ranking" aria-label="Ranking">
-            <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h2.5a1.5 1.5 0 0 1 0 5H17M7 5H4.5a1.5 1.5 0 0 0 0 5H7"/></svg></i>
-            <b>Ranking</b>
-          </button>
-          <button class="gbtn" data-nav="settings" aria-label="Pengaturan">
-            <i><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.2a1.5 1.5 0 0 1 1.5 1.5v.6a1.5 1.5 0 0 0 2.2 1.1l.5-.3a1.5 1.5 0 0 1 2 .6l.4.7a1.5 1.5 0 0 1-.5 2l-.5.3a1.5 1.5 0 0 0 0 2.6l.5.3a1.5 1.5 0 0 1 .5 2l-.4.7a1.5 1.5 0 0 1-2 .6l-.5-.3a1.5 1.5 0 0 0-2.2 1.1v.6a1.5 1.5 0 0 1-1.5 1.5h-.8a1.5 1.5 0 0 1-1.5-1.5v-.6a1.5 1.5 0 0 0-2.2-1.1l-.5.3a1.5 1.5 0 0 1-2-.6l-.4-.7a1.5 1.5 0 0 1 .5-2l.5-.3a1.5 1.5 0 0 0 0-2.6l-.5-.3a1.5 1.5 0 0 1-.5-2l.4-.7a1.5 1.5 0 0 1 2-.6l.5.3a1.5 1.5 0 0 0 2.2-1.1v-.6A1.5 1.5 0 0 1 11.2 2.2z"/></svg></i>
-            <b>Pengaturan</b>
-          </button>
-        </div>
       </div>
       <img class="title-hero" src="sprites/adik_hero.png" width="450" height="700" alt="">
     </div>
@@ -486,10 +465,6 @@
       <button class="gbtn hot" data-nav="hadiah" aria-label="Hadiah">
         <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8"/><rect x="2.4" y="7" width="19.2" height="5" rx="1"/><path d="M12 7v14M12 7S9.6 7 8.2 5.6 8.7 2.2 10.1 2.8 12 7 12 7zM12 7s2.4 0 3.8-1.4S15.3 2.2 13.9 2.8 12 7 12 7z"/></svg></i>
         <b>Hadiah</b>
-      </button>
-      <button class="gbtn" data-nav="ranking" aria-label="Ranking">
-        <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h2.5a1.5 1.5 0 0 1 0 5H17M7 5H4.5a1.5 1.5 0 0 0 0 5H7"/></svg></i>
-        <b>Ranking</b>
       </button>
       <button class="gbtn" data-nav="settings" aria-label="Pengaturan">
         <i><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.2a1.5 1.5 0 0 1 1.5 1.5v.6a1.5 1.5 0 0 0 2.2 1.1l.5-.3a1.5 1.5 0 0 1 2 .6l.4.7a1.5 1.5 0 0 1-.5 2l-.5.3a1.5 1.5 0 0 0 0 2.6l.5.3a1.5 1.5 0 0 1 .5 2l-.4.7a1.5 1.5 0 0 1-2 .6l-.5-.3a1.5 1.5 0 0 0-2.2 1.1v.6a1.5 1.5 0 0 1-1.5 1.5h-.8a1.5 1.5 0 0 1-1.5-1.5v-.6a1.5 1.5 0 0 0-2.2-1.1l-.5.3a1.5 1.5 0 0 1-2-.6l-.4-.7a1.5 1.5 0 0 1 .5-2l.5-.3a1.5 1.5 0 0 0 0-2.6l-.5-.3a1.5 1.5 0 0 1-.5-2l.4-.7a1.5 1.5 0 0 1 2-.6l.5.3a1.5 1.5 0 0 0 2.2-1.1v-.6A1.5 1.5 0 0 1 11.2 2.2z"/></svg></i>
@@ -634,7 +609,36 @@ const DEV_PRIZES = {
   ],
 };
 
-let prize = "";        // decided once, at the email step, before the race starts
+/* Decided once, at the email step, before the race starts.
+
+   The reveal is the entire point of the campaign, so the prize is treated as
+   sticky rather than as a variable that happens to survive: whatever the
+   endpoint hands back is normalised to a trimmed string (a missing field, a
+   null, or a number from the sheet all used to collapse the reveal silently),
+   and it is mirrored into sessionStorage so a reload mid-run — routine on
+   mobile Safari, which discards backgrounded pages — cannot lose a prize the
+   sheet has already recorded. */
+let prize = "";
+const PRIZE_KEY = "ttm-prize-" + VARIANT;
+/* Shown only if we somehow reach the results with nothing: the row is already
+   written server-side at that point, so the player is owed a prize either way
+   and the card must not come up blank. */
+const PRIZE_FALLBACK = "Sudah dikunci — cek emailmu untuk detailnya";
+
+function setPrize(v){
+  prize = typeof v === "string" ? v.trim() : (v == null ? "" : String(v).trim());
+  try {
+    if(prize) sessionStorage.setItem(PRIZE_KEY, prize);
+    else sessionStorage.removeItem(PRIZE_KEY);
+  } catch {}                      // private browsing: the run still works
+  return prize;
+}
+
+function loadPrize(){
+  if(prize) return prize;
+  try { prize = sessionStorage.getItem(PRIZE_KEY) || ""; } catch {}
+  return prize;
+}
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 
@@ -751,39 +755,192 @@ const show = id => {
   $("stage").classList.toggle("racing", id === "scr-race");
   // the title screen puts sound inside Pengaturan instead of the floating disc
   $("stage").classList.toggle("titling", id === "scr-title");
+  mixFor(id);
   closeModal();
 };
 
 /* -------------------------------------------------------------------- audio */
 
-let actx = null, muted = false;
+/* Sampled cues from audio/, with the old synth underneath as the fallback. That
+   fallback is not politeness: the README promises index.html opens straight off
+   the filesystem, and a file:// fetch of audio/ is blocked, so the synth is what
+   plays when you double-click the file rather than serve it. Design in SOUND.md. */
+
+let actx = null, muted = false, bus = null;
+const ac = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
+
 function beep(freq, dur, type="square", vol=.06, slide=0){
   if(muted) return;
-  if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-  const t = actx.currentTime;
-  const o = actx.createOscillator(), g = actx.createGain();
+  const c = ac(), t = c.currentTime;
+  const o = c.createOscillator(), g = c.createGain();
   o.type = type;
   o.frequency.setValueAtTime(freq, t);
   if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t + dur);
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-  o.connect(g).connect(actx.destination);
+  o.connect(g).connect(c.destination);
   o.start(t); o.stop(t + dur + .02);
 }
-const sfxHop     = () => beep(300, .10, "square", .05, 260);
-const sfxPerfect = () => { beep(660, .09, "square", .05); setTimeout(()=>beep(990,.10,"square",.045), 60); };
-const sfxLand    = () => beep(120, .07, "triangle", .05, -60);
-const sfxWhistle = () => { beep(880,.12,"square",.06); setTimeout(()=>beep(1320,.18,"square",.06),130); };
-const sfxWin     = () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,"triangle",.07), i*130));
-const sfxLose    = () => [440,392,330].forEach((f,i)=>setTimeout(()=>beep(f,.26,"triangle",.06), i*160));
+
+const MUSIC = ["bed", "crowd", "pulse", "hook"];
+/* D major pentatonic, one rung per combo step. The ladder is a single recorded
+   cue played at twelve rates, so twelve pitches cost no extra bytes. */
+const LADDER = [587.33, 659.26, 739.99, 880, 987.77, 1174.66,
+                1318.51, 1479.98, 1760, 1975.53, 2349.32, 2637.02];
+
+let sheet = null, sfxMap = null, loopLen = null, payoffBuf = null;
+let musicT0 = 0, hookOn = false, audioReady = false, audioAsked = false;
+let wantMix = "scr-title";
+const stems = {};
+
+/* Called at the email step: there is a natural pause there while the player
+   types, it is the first moment they have shown they intend to play, and it keeps
+   every byte of this off the critical path. */
+function loadAudio(){
+  if(audioAsked) return;
+  audioAsked = true;
+  const c = ac();
+  const dec = u => fetch(u)
+    .then(r => { if(!r.ok) throw new Error(u + " -> " + r.status); return r.arrayBuffer(); })
+    .then(b => c.decodeAudioData(b));
+  Promise.all([
+    fetch("audio/sfx.json").then(r => r.json()),
+    dec("audio/sfx.m4a"),
+    dec("audio/payoff.m4a"),
+    Promise.all(MUSIC.map(id => dec("audio/" + id + ".m4a"))),
+  ]).then(([map, sh, pay, bufs]) => {
+    sfxMap = map.cues; loopLen = map.loops; sheet = sh; payoffBuf = pay;
+    MUSIC.forEach((id, i) => { stems[id] = { buf: bufs[i] }; });
+    bus = c.createGain();
+    bus.gain.value = muted ? 0 : 1;
+    bus.connect(c.destination);
+    audioReady = true;
+    mixFor(wantMix);              // the player may already have moved on
+  }).catch(err => {
+    // a slow or missing audio/ must never cost anyone the race
+    console.warn("audio/ unavailable, using synth cues:", err.message);
+  });
+}
+
+/* one slice of the sprite sheet; offsets come straight from audio/sfx.json */
+function cue(name, rate = 1, gain = 1){
+  if(muted || !audioReady) return false;
+  const s = sfxMap[name];
+  if(!s) return false;
+  const src = actx.createBufferSource();
+  src.buffer = sheet;
+  src.playbackRate.value = rate;
+  const g = actx.createGain();
+  g.gain.value = gain;
+  src.connect(g).connect(bus);
+  src.start(actx.currentTime, s.at, s.dur / rate);
+  return true;
+}
+
+/* Every stem starts once at a shared t0 and is never stopped -- only its gain
+   moves. Restarting a source to "turn a layer on" is what makes layers drift out
+   of phase, and the pulse is the tap grid, so it cannot be allowed to slip. */
+function musicUp(){
+  if(!audioReady || musicT0) return;
+  musicT0 = actx.currentTime + .06;
+  for(const id of MUSIC){
+    const st = stems[id];
+    const src = actx.createBufferSource();
+    src.buffer = st.buf;
+    src.loop = true;
+    src.loopStart = 0;
+    /* NOT st.buf.duration. AAC pads to whole 1024-sample frames and Chrome does
+       not trim the trailing padding, so a stem decodes 7-14 ms longer than it
+       was rendered; looping on that drifts the tap grid ~85 ms over a race.
+       audio/sfx.json carries the musical length, which is exact. */
+    src.loopEnd = loopLen[id] || st.buf.duration;
+    st.gain = actx.createGain();
+    st.gain.gain.value = 0;
+    src.connect(st.gain).connect(bus);
+    src.start(musicT0);
+  }
+}
+
+function ride(id, on, tau){
+  const st = stems[id];
+  if(!st || !st.gain) return;
+  st.gain.gain.cancelScheduledValues(actx.currentTime);
+  st.gain.gain.setTargetAtTime(on ? 1 : 0, actx.currentTime, tau);
+}
+
+// one musical idea; a screen change adds or drops a layer rather than cutting
+const SCREEN_MIX = {
+  "scr-title":  ["bed", "crowd"],
+  "scr-email":  ["bed", "crowd"],
+  "scr-select": ["bed", "crowd"],
+  "scr-race":   ["pulse", "crowd"],
+  "scr-done":   [],
+};
+
+function mixFor(id){
+  wantMix = id;
+  if(!audioReady) return;
+  musicUp();
+  const want = SCREEN_MIX[id] || [];
+  for(const s of MUSIC) if(s !== "hook") ride(s, want.indexOf(s) >= 0, .28);
+  if(id !== "scr-race") setHook(false);
+}
+
+/* Layer C is the reward: the arrangement thickens once the player is holding a
+   rhythm, which lands faster than any number on the HUD. */
+function setHook(on){
+  if(!audioReady || hookOn === on) return;
+  hookOn = on;
+  ride("hook", on, on ? .10 : .45);
+}
+
+const sfxHop     = () => cue("hop") || beep(300, .10, "square", .05, 260);
+const sfxPerfect = combo => cue("perfect", LADDER[clamp(combo, 1, COMBO_MAX) - 1] / LADDER[0])
+  || (beep(660, .09, "square", .05), setTimeout(() => beep(990, .10, "square", .045), 60));
+const sfxLand    = () => cue("land", 1, .8) || beep(120, .07, "triangle", .05, -60);
+/* the trip and the dud tap were silent until now -- see SOUND.md; the trip is the
+   race's only punishment, so it is mixed to cut through the pulse */
+const sfxTrip    = () => cue("trip") || beep(210, .24, "sawtooth", .06, -120);
+const sfxDud     = () => cue("dud", 1, .9) || beep(150, .04, "square", .02);
+const sfxLead    = () => cue("lead");
+const sfxTape    = () => cue("tape");
+const sfxPrize   = () => cue("prize");
+const sfxTick    = () => cue("tick") || beep(440, .12, "square", .05);
+const sfxRoll    = () => cue("roll");
+const sfxWhistle = () => cue("whistle")
+  || (beep(880, .12, "square", .06), setTimeout(() => beep(1320, .18, "square", .06), 130));
+const sfxLose    = () => cue("lose")
+  || [440,392,330].forEach((f,i) => setTimeout(() => beep(f, .26, "triangle", .06), i*160));
+const sfxSelect  = () => cue("ui-select")  || beep(700, .07, "square", .05);
+const sfxConfirm = () => cue("ui-confirm") || beep(660, .10, "square", .06);
+const sfxOpen    = () => cue("ui-open")    || beep(620, .07, "square", .05);
+
+// the results card gets the full band rather than a sting, so it is its own buffer
+function sfxWin(){
+  if(!muted && audioReady && payoffBuf){
+    const src = actx.createBufferSource();
+    src.buffer = payoffBuf;
+    src.connect(bus);
+    src.start(actx.currentTime);
+    return;
+  }
+  [523,659,784,1046].forEach((f,i) => setTimeout(() => beep(f, .22, "triangle", .07), i*130));
+}
 
 /* inline SVG rather than 🔊/🔇: an emoji is a colour glyph, so the button's own
    `color` never reaches it and every platform draws a different weight on the disc */
 const ICON_ON  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19zM15.5 9.2a4 4 0 0 1 0 5.6M18.4 6.6a8 8 0 0 1 0 10.8"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19zM16 10l5 4M21 10l-5 4"/></svg>';
 
+const MUTE_KEY = "ttm-suara";
+
 function setMuted(v){
   muted = v;
+  // a player who muted once and came back through a second ad impression should
+  // stay muted; localStorage throws rather than no-ops in some privacy modes
+  try { localStorage.setItem(MUTE_KEY, v ? "0" : "1"); } catch (e) { /* ignore */ }
+  // the music runs through the bus, so muting has to reach it and not just the cues
+  if(bus) bus.gain.setTargetAtTime(v ? 0 : 1, actx.currentTime, .04);
   const b = $("mute");
   b.innerHTML = muted ? ICON_OFF : ICON_ON;
   b.setAttribute("aria-pressed", String(muted));
@@ -793,28 +950,17 @@ function setMuted(v){
   if(sw) sw.textContent = muted ? "Mati" : "Nyala";
 }
 $("mute").onclick = () => setMuted(!muted);
-setMuted(false);
+let startMuted = false;
+try { startMuted = localStorage.getItem(MUTE_KEY) === "0"; } catch (e) { /* ignore */ }
+setMuted(startMuted);
 
-/* ------------------------------------------- hadiah / ranking / pengaturan */
+/* An AudioContext created before any gesture starts suspended, and one that was
+   running can be suspended again when the tab is backgrounded mid-race. */
+const wake = () => { if(actx && actx.state === "suspended") actx.resume(); };
+document.addEventListener("pointerdown", wake, true);
+document.addEventListener("keydown", wake, true);
 
-/* Times are kept on the device only — the campaign sheet is the record of who
-   played, and a global board would need a server the game does not have. */
-const BEST_KEY = "ttm-best-" + VARIANT;
-const esc = s => String(s).replace(/[&<>"]/g, c =>
-  ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
-
-function loadBest(){
-  try {
-    const v = JSON.parse(localStorage.getItem(BEST_KEY));
-    return Array.isArray(v) ? v.filter(r => r && typeof r.t === "number") : [];
-  } catch { return []; }          // private browsing, or a hand-edited value
-}
-function recordBest(name, time){
-  const list = loadBest();
-  list.push({ n: name, t: +time.toFixed(2) });
-  list.sort((a, b) => a.t - b.t);
-  try { localStorage.setItem(BEST_KEY, JSON.stringify(list.slice(0, 5))); } catch {}
-}
+/* ----------------------------------------------------- hadiah / pengaturan */
 
 const MODALS = {
   hadiah: () => ["Hadiah Merdeka", `
@@ -825,16 +971,6 @@ const MODALS = {
       <li>Hadiah muncul di akhir balapan. Semua yang finis kebagian.</li>
     </ol>
     <p class="fine">Satu hadiah per alamat email.</p>`],
-
-  ranking: () => {
-    const list = loadBest();
-    return ["Waktu Terbaik", list.length
-      ? `<ol class="ranklist">${list.map(r =>
-          `<li><span>${esc(r.n)}</span><b>${r.t.toFixed(2)}s</b></li>`).join("")}</ol>
-         <p class="fine">Tersimpan di perangkat ini.</p>`
-      : `<p class="lead">Belum ada catatan waktu.</p>
-         <p class="fine">Selesaikan satu balapan dan waktumu muncul di sini.</p>`];
-  },
 
   settings: () => ["Pengaturan", `
     <div class="switch"><span>Suara</span>
@@ -852,7 +988,7 @@ function openModal(kind){
   lastFocus = document.activeElement;
   $("scr-modal").classList.add("on");
   $("modal-close").focus({ preventScroll: true });
-  beep(620, .07, "square", .05);
+  sfxOpen();
 }
 function closeModal(){
   const m = $("scr-modal");
@@ -861,8 +997,8 @@ function closeModal(){
   if(lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
 }
 
-// delegated: ranking and pengaturan each appear twice in the markup — once in the
-// top row, once in the phone layout's sub-nav — and only one copy is ever visible
+// delegated off data-nav: the hadiah card is reachable from both the top-row button
+// and the prize chip, so neither needs its own binding
 document.addEventListener("click", ev => {
   const nav = ev.target.closest("[data-nav]");
   if(nav){ openModal(nav.dataset.nav); return; }
@@ -876,6 +1012,7 @@ $("scr-modal").addEventListener("click", ev => { if(ev.target === $("scr-modal")
 let state = "title";     // title | select | countdown | race | finish
 let pick = 0;
 let racers = [], camX = CAM_MIN, clock = 0, anim = 0, countdown = 0, finishAt = 0, flash = 0;
+let leading = true, rolled = false;     // audio state: see the lead change in step()
 const puffs = [];
 
 function makeRacers(){
@@ -896,6 +1033,7 @@ function makeRacers(){
     r.wait  = lerp(.39, .152, r.skill);          // pause on the ground per hop
   });
   camX = CAM_MIN; clock = 0; finishAt = 0; puffs.length = 0;
+  leading = true; rolled = false; hookOn = false;
 }
 
 function hop(r){
@@ -903,7 +1041,10 @@ function hop(r){
   const perfect = r.groundT <= PERFECT;
   r.combo = perfect ? Math.min(r.combo + 1, COMBO_MAX) : 0;
   r.step = r.dist * (1 + r.combo * .028);
-  if(r.human) perfect && r.combo > 1 ? sfxPerfect() : sfxHop();
+  if(r.human){
+    perfect && r.combo > 1 ? sfxPerfect(r.combo) : sfxHop();
+    setHook(r.combo >= 4);          // the brass arrives once the rhythm is real
+  }
 }
 
 function tap(){
@@ -912,11 +1053,14 @@ function tap(){
   if(r.done) return;
   if(!r.air){
     if(r.lock <= 0) hop(r);
+    else sfxDud();                  // locked after a trip: heard you, not yet
   } else if(HOP_TIME - r.hopT <= BUFFER){
     r.buffered = true;              // forgiving early tap, still counts as in-rhythm
   } else {
     r.combo = 0;                    // way too early: you trip over the sack
     r.wasted++;
+    sfxTrip();                      // the only punishment the race has
+    setHook(false);
   }
 }
 
@@ -935,7 +1079,11 @@ function step(dt){
     const was = Math.ceil(countdown);
     countdown -= dt;
     const now = Math.ceil(countdown);
-    if(now !== was && now >= 0) now === 0 ? sfxWhistle() : beep(440, .12, "square", .05);
+    if(now !== was && now >= 0) now === 0 ? sfxWhistle() : sfxTick();
+    /* The 1 s countdown tick is 60 BPM and not a subdivision of 160, so rather
+       than re-time it, a kendang roll fills the last second and accelerates into
+       the pulse -- the first hop then lands on the downbeat. */
+    if(!rolled && countdown <= 1){ rolled = true; sfxRoll(); }
     if(countdown <= 0){ state = "race"; clock = 0; }
     racers.forEach(r => { r.groundT += dt; });
     return;
@@ -979,7 +1127,20 @@ function step(dt){
       if(r.human){
         finishAt = clock; flash = 1;
         state = "finish";
+        sfxTape();
+        setHook(false);
       }
+    }
+  }
+
+  /* Lead changes are the only drama the rubber band produces and they were silent.
+     `leading` starts true because everyone is level on the line, so the crowd
+     reacts to regaining the lead rather than to the start. */
+  if(state === "race"){
+    const first = racers.every(r => r.human || racers[0].x >= r.x);
+    if(first !== leading){
+      leading = first;
+      if(first) sfxLead();
     }
   }
 
@@ -1732,7 +1893,7 @@ function setPick(i, quiet){
   i = clamp(Math.round(i), 0, CHARS.length - 1);
   const changed = i !== pick;
   pick = i;
-  if(changed && !quiet) beep(700, .07, "square", .05);
+  if(changed && !quiet) sfxSelect();
 
   const np = $("nameplate");
   $("pick-name").textContent = CHARS[pick].name;
@@ -1829,16 +1990,24 @@ function endRace(){
        <span>${CHARS[r.ci].name}</span>
        <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
      </div>`).join("");
-  if(board[meIdx].done) recordBest(CHARS[board[meIdx].ci].name, board[meIdx].time);
-  // everyone who finishes keeps the prize their email drew — placing does not gate it
-  $("prize-text").textContent = prize;
-  $("prize").style.display = prize ? "" : "none";
+  /* Everyone who finishes keeps the prize their email drew — placing does not
+     gate it, and neither does anything else: this slot is never collapsed. It
+     used to be hidden whenever `prize` was falsy, which turned any hiccup in
+     the response into a results card with no payoff on it at all. */
+  $("prize-text").textContent =
+    loadPrize() || (LEAD_ENDPOINT ? PRIZE_FALLBACK : setPrize(devDraw()));
+  $("prize").style.display = "";
   meIdx === 0 ? sfxWin() : sfxLose();
+  // the prize is the actual payload of the campaign, so it gets its own moment
+  setTimeout(sfxPrize, 700);
   show("scr-done");
 }
 
 function toEmail(){
   state = "email";
+  // fetch the audio here: the player has shown intent, and the pause while they
+  // type hides the download entirely. A bounce off the title costs nobody the bytes.
+  loadAudio();
   show("scr-email");
   $("email-input").focus({ preventScroll: true });
 }
@@ -1864,9 +2033,15 @@ $("email-form").onsubmit = async ev => {
   try {
     const res = await claimPrize(email);
     if(!res.ok) throw new Error(res.error || "gagal");
-    prize = res.prize;
+    // one retry: the row is written on the first call, so a second claim comes
+    // back as `returning` with the same prize rather than drawing a new one
+    if(!setPrize(res.prize)){
+      console.warn("lead capture returned no prize, retrying:", res);
+      setPrize((await claimPrize(email)).prize);
+    }
+    if(!prize) console.error("lead capture returned no prize twice; falling back");
     note.textContent = res.returning ? "Email ini sudah pernah main — hadiahmu tetap sama." : "";
-    beep(660,.1,"square",.06);
+    sfxConfirm();
     toSelect();
   } catch (err) {
     note.classList.add("bad");
@@ -1877,8 +2052,8 @@ $("email-form").onsubmit = async ev => {
   }
 };
 
-$("btn-play").onclick   = () => { beep(660,.1,"square",.06); toEmail(); };
-$("btn-go").onclick     = () => { beep(660,.1,"square",.06); startRace(); };
+$("btn-play").onclick   = () => { sfxConfirm(); toEmail(); };
+$("btn-go").onclick     = () => { sfxConfirm(); startRace(); };
 $("btn-change").onclick = () => toSelect();
 
 const zone = $("tapzone");

@@ -20,6 +20,13 @@ images/karakter-*
 # directory, as this file used to, ships a title screen with no background or logo.
 images/bg.png
 
+# Audio: the page loads audio/*.m4a plus audio/sfx.json (the sprite-sheet offset map).
+# The WAVs are the synthesis intermediates and preview.html is the audition page —
+# 3.2 MB between them, and nothing at runtime asks for either.
+audio/wav/
+audio/preview.html
+
 # Build-time only.
 tools/
 README.md
+SOUND.md
