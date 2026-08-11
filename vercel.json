@@ -2,6 +2,6 @@
   "trailingSlash": false,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/swe", "destination": "/index.html" }
+    { "source": "/swe", "destination": "/" }
   ]
 }
