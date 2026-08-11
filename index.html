@@ -620,14 +620,14 @@
      in ~330px of height however far the type is scaled down.
 
      So the figure and the result go side by side, which buys back most of the
-     height the single column was spending. The layer's own padding and the
-     layer's own padding does not scale with --ts, and at this height it is a big
-     enough fraction of the budget to be worth trimming too. */
+     height the single column was spending. The layer's own padding does not scale
+     with --ts, and at this height it is a big enough fraction of the budget to be
+     worth trimming too. */
   @media (max-height:620px) and (min-width:520px){
-    /* 52vh is measured, not chosen: it is where the tallest of these layouts
-       (568x320, the smallest landscape phone still worth supporting) stops
-       needing to scroll. */
-    #reveal{--ts:min(40vw,300px,94vh);--cw:min(96vw,calc(var(--ts) * 2.5));
+    /* Measured across ten viewports from 320x568 to 1280x713 — 80vh overflows a
+       740x360 window by 7px, so 74vh is the ceiling. 40vw and 300px still bind
+       ahead of it on the wider windows. */
+    #reveal{--ts:min(40vw,300px,74vh);--cw:min(96vw,calc(var(--ts) * 2.5));
             gap:clamp(6px,1.2vmin,11px)}
     #scr-done{padding:clamp(8px,1.6vmin,16px)}
     #results{display:grid;grid-template-columns:1fr 1fr;
