@@ -342,13 +342,6 @@
               font-size:clamp(11px,1.9vmin,15px);color:#7a5a2c}
   .email-note.bad{color:var(--merah-tua)}
 
-  /* the payoff line on the results card */
-  #prize{margin-top:.7em;padding-top:.7em;border-top:3px dashed rgba(104,80,32,.35);text-align:center}
-  #prize span{display:block;color:#7a5a2c;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
-              font-size:clamp(9px,1.5vmin,12px)}
-  #prize b{display:block;margin-top:.25em;color:var(--merah);line-height:1.15;
-           font-size:clamp(15px,2.6vmin,23px)}
-
   /* ---- picker: a slider, one racer at a time, neighbours peeking in ------ */
   /* the hero portraits are bust-length and much taller than they are wide, so
      the frame is roomier than it was for the full-body vector sprites */
@@ -395,14 +388,263 @@
   #tapzone{position:absolute;inset:0;display:none}
   #tapzone.on{display:block}
 
-  #results{padding:clamp(12px,2.6vmin,26px);min-width:min(88vw,460px);border-radius:10px}
-  #results .rowline{display:flex;align-items:center;gap:.7em;padding:.4em .6em;border-radius:6px;
-                    font-size:clamp(12px,2.1vmin,18px);font-weight:600}
-  #results .rowline.me{background:var(--putih);font-weight:700;box-shadow:inset .3em 0 0 var(--merah)}
-  #results .rowline span:nth-child(2){flex:1;text-align:left}
-  #results .pos{width:1.9em;text-align:center;font-weight:700;color:var(--merah)}
-  #results img{height:clamp(30px,5vmin,46px);object-fit:contain;object-position:bottom}
-  .verdict{font-size:clamp(22px,5vmin,42px);margin-bottom:.35em}
+  /* --------------------------------------------------------- the reveal ---- */
+  /* The payoff screen, dressed as the campaign key visual: trophy and ribbon over
+     the gold card, the figure on a ticket stub, the perks as chips, the race
+     result on a navy panel, and the claim line under it all.
+
+     The whole stack lives inside #reveal so it scrolls as one unit, and the auto
+     block margins are spelled out here rather than left to
+     `.layer > :first-child/:last-child` — #konfeti is a sibling, so #reveal is
+     neither. Same effect either way: centred while it fits, released when it does
+     not, so the figure can never be cropped off a short phone. */
+  /* --cw is the card's width; --ts is the scale every size in the reveal is a
+     ratio of, so the whole composition scales as one unit instead of each part
+     clamping against the viewport on its own — the same trick the title lockup
+     plays with --w, and for the same reason. It also keeps the type off vmin,
+     which on a tall phone is the width anyway and on a short landscape window is
+     the wrong axis entirely. The ratios come off the campaign key visual,
+     measured against its 1082px frame.
+
+     The two are separate because a short landscape window needs a card that is
+     wide and type that is small — one variable cannot do both. Everywhere else
+     --ts is just --cw. Only --pad stays on --cw: it is a width, not a type size. */
+  #reveal{--cw:min(94vw,455px);
+          /* 58vh is the height cap. On a portrait phone it never binds (58vh is
+             larger than the card is wide), so the scale is just --cw; it exists
+             for the squat window — including an ordinary 1280x713 desktop, where
+             the uncapped card ran 27px past the fold. */
+          --ts:min(var(--cw),58vh);
+          --crest:calc(var(--ts) * .34);
+          position:relative;z-index:1;margin-top:auto;margin-bottom:auto;
+          display:flex;flex-direction:column;align-items:center;
+          width:var(--cw);gap:clamp(9px,1.9vmin,16px);
+          /* pays for the trophy's overhang, which would otherwise land in the
+             scroll container's unreachable top overflow */
+          padding-top:calc(var(--crest) * .6)}
+
+  #results{--pad:calc(var(--cw) * .04);
+           position:relative;width:100%;border-radius:12px;
+           display:flex;flex-direction:column;gap:clamp(7px,1.5vmin,13px);
+           padding:calc(var(--crest) * .2) var(--pad) var(--pad)}
+
+  /* The trophy hangs out of the top of the card, and its base is *meant* to
+     disappear behind the banner the way it does in the key visual: #verdict comes
+     after this in the markup and both paint at z-index auto, so document order
+     alone puts the ribbon in front.
+
+     .badge's drop-shadow filter already makes #results a containing block for
+     this; position:relative says so out loud, and means the card lends the trophy
+     its hard gold shadow too. */
+  #crest{position:absolute;left:50%;top:calc(var(--crest) * -.6);
+         width:var(--crest);height:var(--crest);transform:translateX(-50%);
+         pointer-events:none;
+         animation:crest-in .45s .08s cubic-bezier(.2,1.5,.4,1) both}
+  #crest svg{display:block;width:100%;height:100%;overflow:visible}
+  @keyframes crest-in{from{opacity:0;transform:translateX(-50%) scale(.55) translateY(22%)}
+                        to{opacity:1;transform:translateX(-50%) scale(1)}}
+
+  /* the SELAMAT banner — the title screen's .ribbon language (notched ends, red
+     gradient, hard shadow) sized off its own font-size so the notch scales with
+     the copy rather than against the viewport */
+  /* pulled out to the card's border edge, so the banner reads as laid over the
+     card rather than set inside its padding */
+  #verdict{align-self:stretch;margin:0 calc(var(--pad) * -1);
+           padding:.28em 1.4em;text-align:center;
+           font-size:calc(var(--ts) * .088);font-weight:700;line-height:1.1;
+           text-transform:uppercase;letter-spacing:.02em;color:var(--putih);
+           background:linear-gradient(180deg,#e8262d 0%,#c4151b 52%,#9d1015 100%);
+           clip-path:polygon(0 0,100% 0,calc(100% - .5em) 50%,100% 100%,0 100%,.5em 50%);
+           box-shadow:inset 0 .08em 0 rgba(255,255,255,.26);
+           filter:drop-shadow(0 .09em 0 #6d0b0f) drop-shadow(0 .17em .26em rgba(40,6,8,.42));
+           text-shadow:0 .055em 0 rgba(58,6,8,.5)}
+
+  #meraih{display:flex;align-items:center;justify-content:center;gap:.7em;
+          color:#7a5320;font-weight:700;text-transform:uppercase;letter-spacing:.16em;
+          font-size:clamp(10px,1.75vmin,14px)}
+  #meraih::before,#meraih::after{content:"";width:1.5em;height:2px;border-radius:2px;
+                                 background:rgba(122,83,32,.45)}
+
+  /* The figure sits on a ticket stub, scalloped down both long edges. That is a
+     mask, not a border-image: two layers, each covering just over half the width
+     and scalloped along its own outer edge, which the default `add` compositing
+     unions back into a full box. A browser without mask support gets the plain
+     rounded rectangle — which is why none of the depth here is an outer
+     box-shadow, since the mask would clip one. */
+  #ticket{display:flex;flex-direction:column;align-items:center;
+          padding:.65em .95em .8em;border-radius:9px;
+          background:linear-gradient(180deg,#ffe98a 0%,#ffd233 46%,#f7b81e 100%);
+          box-shadow:inset 0 0 0 2px rgba(255,255,255,.5),
+                     inset 0 .1em 0 rgba(255,255,255,.55),
+                     inset 0 -.12em 0 rgba(150,96,10,.26);
+          -webkit-mask:radial-gradient(circle at left,#0000 5px,#000 5.5px) left/51% 15px repeat-y,
+                       radial-gradient(circle at right,#0000 5px,#000 5.5px) right/51% 15px repeat-y;
+          mask:radial-gradient(circle at left,#0000 5px,#000 5.5px) left/51% 15px repeat-y,
+               radial-gradient(circle at right,#0000 5px,#000 5.5px) right/51% 15px repeat-y;
+          animation:tkt .42s .48s cubic-bezier(.2,1.4,.45,1) both}
+  @keyframes tkt{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+  #ticket .th{display:flex;align-items:center;gap:.5em;color:#7a2418;font-weight:700;
+              text-transform:uppercase;letter-spacing:.14em;
+              font-size:clamp(11px,1.95vmin,15px)}
+  #ticket .th i{font-style:normal;color:var(--merah);font-size:1.1em;line-height:1}
+
+  /* the payoff figure. Hard offset shadow, no white outline: .display's outline
+     is there to lift red off the photo backdrop, and on gold it only muddies.
+     flex-start rather than baseline — the key visual hangs the "Rp" from the top
+     of the digits, and a shared baseline would drop it to their feet. */
+  #prize-amount{display:flex;align-items:flex-start;justify-content:center;gap:.06em;
+                margin:.1em 0 .2em;color:var(--merah);font-weight:700;line-height:1;
+                letter-spacing:-.015em;
+                text-shadow:0 .03em 0 #fff6cc,.012em .055em 0 #a8161c,
+                            0 .085em 0 rgba(108,26,18,.55),0 .1em .1em rgba(80,20,14,.3)}
+  #prize-amount .rp{font-size:calc(var(--ts) * .058);letter-spacing:.02em;
+                    margin-top:.14em}
+  #prize-amount .n{font-size:calc(var(--ts) * .128)}
+  /* a prize the parser does not recognise prints verbatim: prose, not a figure */
+  #prize-amount.text{display:block;text-align:center;letter-spacing:0;line-height:1.2;
+                     font-size:clamp(14px,2.5vmin,21px);
+                     text-shadow:0 .04em 0 rgba(122,36,24,.28)}
+  #prize-tier{padding:.3em 1.05em;border-radius:999px;color:var(--putih);
+              background:linear-gradient(180deg,#e8262d,#bf1419);
+              font-weight:700;text-transform:uppercase;letter-spacing:.09em;
+              font-size:calc(var(--ts) * .034);
+              box-shadow:0 .14em 0 rgba(122,36,24,.45)}
+  /* SWE's prizes are two figures summed into one total, so the split is spelled
+     out — otherwise the headline is a number the player cannot check against the
+     landing page */
+  #prize-break{margin-top:.45em;text-align:center;color:#7a2418;font-weight:600;
+               line-height:1.25;font-size:clamp(9.5px,1.65vmin,13px)}
+  #prize-break:empty{display:none}
+
+  /* the extras that came with the figure. Chips rather than a run-on line: the
+     sheet joins them with "+", and that is exactly how they read. */
+  /* the size lives here rather than on .perk so the "+" between the chips scales
+     with them — as a sibling it would otherwise inherit the page's base size and
+     sit there twice as big as the text it joins */
+  #perks{font-size:calc(var(--ts) * .031);
+         display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+         gap:.45em .55em;padding:.55em .7em;border-radius:9px;
+         background:rgba(255,255,255,.9);
+         box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 .1em 0 rgba(150,96,10,.16)}
+  #perks:empty{display:none}
+  #perks .perk{display:flex;align-items:center;gap:.5em;text-align:left;
+               font-weight:700;text-transform:uppercase;line-height:1.12;color:#123a6b}
+  #perks .perk.kuning{color:#7a2418}
+  #perks .perk i{flex:0 0 auto;display:grid;place-items:center;
+                 width:2.1em;height:2.1em;border-radius:.4em}
+  #perks .perk.biru i{background:linear-gradient(180deg,#3574d4,#183f86);
+                      box-shadow:0 2px 0 rgba(10,30,70,.4)}
+  #perks .perk.kuning i{background:linear-gradient(180deg,#ffd233,#f0a413);
+                        box-shadow:0 2px 0 rgba(150,96,10,.45)}
+  #perks .perk i svg{width:66%;height:66%;stroke:var(--putih);fill:none;stroke-width:2.1;
+                     stroke-linecap:round;stroke-linejoin:round}
+  #perks .plus{flex:0 0 auto;display:grid;place-items:center;width:1.5em;height:1.5em;
+               border-radius:999px;background:var(--merah);color:var(--putih);
+               font-weight:700;line-height:1;box-shadow:0 2px 0 rgba(122,20,25,.45)}
+
+  /* carries the card's own gap, so stacking the panel and the strip inside a
+     wrapper lays out exactly as it did when they were siblings */
+  #side{display:flex;flex-direction:column;gap:clamp(7px,1.5vmin,13px)}
+
+  /* the race result. Navy, because it has to read as data next to all that gold. */
+  #stats{display:flex;align-items:stretch;border-radius:9px;color:var(--putih);
+         background:linear-gradient(180deg,#26406e 0%,#152540 100%);
+         box-shadow:inset 0 0 0 2px rgba(255,255,255,.12),0 .1em 0 rgba(150,96,10,.18)}
+  #stats > div{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;
+               padding:.55em .5em}
+  #stats .rank{gap:.4em}
+  #stats .por{height:clamp(30px,5.6vmin,46px);width:auto;object-fit:contain;
+              object-position:bottom;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+  #stats .medal{display:grid;place-items:center;flex:0 0 auto;
+                width:1.95em;height:1.95em;border-radius:999px;
+                font-weight:700;font-size:clamp(11px,2vmin,16px);color:#5a3c08;
+                background:linear-gradient(180deg,#ffe27a,#d99a10);
+                box-shadow:inset 0 0 0 2px rgba(255,255,255,.5),0 2px 0 rgba(0,0,0,.32)}
+  #stats .medal.m2{color:#3d4650;background:linear-gradient(180deg,#f4f7fa,#aeb8c4)}
+  #stats .medal.m3{color:#5a3218;background:linear-gradient(180deg,#eab68b,#b06a34)}
+  #stats .medal.m4{color:#39434f;background:linear-gradient(180deg,#e0e5ea,#98a4b2)}
+  #stats .rank b{font-size:calc(var(--ts) * .072);line-height:1;letter-spacing:-.02em}
+  /* a hairline rule rather than a border: the panel's corners are rounded, and a
+     border on the second cell would show through them */
+  #stats .time{flex-direction:column;gap:.08em;
+               box-shadow:inset 1.5px 0 0 rgba(255,255,255,.15)}
+  #stats .time .k{color:var(--kuning-2);font-weight:700;text-transform:uppercase;
+                  letter-spacing:.12em;font-size:clamp(8.5px,1.5vmin,12px)}
+  #stats .time .v{display:flex;align-items:center;gap:.35em}
+  #stats .time .v svg{flex:0 0 auto;width:clamp(15px,3vmin,26px);height:clamp(15px,3vmin,26px);
+                      stroke:var(--kuning-2);fill:none;stroke-width:2;
+                      stroke-linecap:round;stroke-linejoin:round}
+  #stats .time .v b{font-size:calc(var(--ts) * .072);line-height:1;letter-spacing:-.02em}
+  #stats .time .v em{font-style:normal;font-weight:700;text-transform:uppercase;
+                     letter-spacing:.1em;color:rgba(255,255,255,.68);
+                     font-size:clamp(8.5px,1.5vmin,12px)}
+
+  /* the field, compressed to the player and whoever they were actually racing:
+     four full rows was more board than the payoff needs, and it pushed the
+     figure off a short phone */
+  #strip{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+         gap:.28em .4em;padding-top:.1em;
+         font-weight:700;color:#6b4a1e;font-size:calc(var(--ts) * .029)}
+  #strip .e{display:flex;align-items:center;gap:.4em;padding:.25em .6em;
+            border-radius:999px;white-space:nowrap}
+  #strip .e.me{background:var(--kuning-2);color:#5a3708;
+               box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 2px 0 rgba(150,96,10,.3)}
+  #strip .p{color:var(--merah)}
+  #strip .e.me .p{color:var(--merah-tua)}
+  #strip .sep{color:rgba(107,74,30,.4)}
+
+  /* the one thing the old card had no line for: what happens next */
+  #claim{display:flex;align-items:center;justify-content:center;gap:.6em;
+         color:var(--putih);font-weight:700;line-height:1.3;text-align:center;
+         font-size:calc(var(--ts) * .04);
+         text-shadow:0 .08em .18em rgba(30,6,8,.7)}
+  /* 16em is where the copy settles into two even lines rather than orphaning
+     "kamu!" on a third; text-wrap:balance evens them out where it is supported
+     and is harmless where it is not */
+  #claim span{max-width:16em;text-wrap:balance}
+  #claim::before,#claim::after{content:"";flex:0 0 auto;width:1.05em;height:1.7em;
+    background:repeating-linear-gradient(102deg,var(--kuning-2) 0 .15em,#0000 .15em .45em)}
+  #claim::after{transform:scaleX(-1)}
+
+  /* A one-shot burst over the scrim. The scene's own confetti is still drifting
+     on the canvas behind the card, but it sits under the scrim and reads as
+     background — this is the layer that lands with the prize sting. The pieces
+     are rebuilt on every reveal so a replay re-fires it. */
+  #konfeti{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  #konfeti i{position:absolute;top:-10%;display:block;width:.7em;height:1.15em;
+             border-radius:1px;animation:fall linear both}
+  @keyframes fall{from{transform:translateY(0) rotate(0)}
+                    to{transform:translateY(122vh) rotate(760deg)}}
+
+  /* Wide and short — a phone on its side, or a squat desktop window. This is not
+     an edge case: the race is a horizontal chase and portrait letterboxes it, so a
+     phone on its side is the orientation the game expects, and the reveal has to
+     land there too. The card is poster-shaped, and one column of it does not fit
+     in ~330px of height however far the type is scaled down.
+
+     So the figure and the result go side by side, which buys back most of the
+     height the single column was spending. The layer's own padding and the
+     Ganti Karakter button do not scale with --ts, and at this height they are a
+     big enough fraction of the budget to be worth trimming too. */
+  @media (max-height:620px) and (min-width:520px){
+    /* 52vh is measured, not chosen: it is where the tallest of these layouts
+       (568x320, the smallest landscape phone still worth supporting) stops
+       needing to scroll. */
+    #reveal{--ts:min(40vw,300px,52vh);--cw:min(96vw,calc(var(--ts) * 2.5));
+            gap:clamp(6px,1.2vmin,11px)}
+    #scr-done{padding:clamp(8px,1.6vmin,16px)}
+    #results{display:grid;grid-template-columns:1fr 1fr;
+             column-gap:var(--pad);row-gap:clamp(5px,1.1vmin,10px)}
+    /* the banner and its kicker still read across the whole card */
+    #verdict,#meraih{grid-column:1/-1}
+    #ticket{grid-column:1;grid-row:3}
+    #perks {grid-column:1;grid-row:4}
+    /* one cell spanning both rows, and start rather than stretch: the right
+       column is much shorter than the ticket beside it, so sharing the ticket's
+       rows would strand the strip at the bottom of the card */
+    #side  {grid-column:2;grid-row:3/span 2;align-self:start}
+    #scr-done .btn{padding:.5em 1.6em;font-size:calc(var(--ts) * .05)}
+  }
 
   /* the frame places it at 116px on 1920 wide, 50/55 in from the corner */
   /* above the picker slides, which layoutPicker() stacks up to z-index 100 */
@@ -511,13 +753,90 @@
   <div id="tapzone"></div>
 
   <div class="layer scrim" id="scr-done">
-    <div id="results" class="badge fade">
-      <div class="verdict display" id="verdict"></div>
-      <div id="board"></div>
-      <div id="prize"><span>Hadiahmu</span><b id="prize-text"></b></div>
-    </div>
-    <div class="row">
-      <button class="btn ghost" id="btn-change">Ganti Karakter</button>
+    <div id="konfeti" aria-hidden="true"></div>
+
+    <div id="reveal">
+      <div id="results" class="badge fade">
+        <!-- inline rather than a sprite: it is one drawing used once, and the
+             gradients want the page's own tokens -->
+        <div id="crest" aria-hidden="true">
+          <svg viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="tg-cup" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#fff2b0"/>
+                <stop offset=".42" stop-color="#ffc61a"/>
+                <stop offset="1" stop-color="#dd8b00"/>
+              </linearGradient>
+              <radialGradient id="tg-glow">
+                <stop offset="0" stop-color="#ffe98a" stop-opacity=".8"/>
+                <stop offset="1" stop-color="#ffe98a" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="60" cy="52" r="58" fill="url(#tg-glow)"/>
+            <g fill="none" stroke="#f0b21a" stroke-width="4.4" stroke-linecap="round">
+              <path d="M30 30c-10 9-12 24-6 36"/><path d="M90 30c10 9 12 24 6 36"/>
+            </g>
+            <g fill="#ffd233">
+              <ellipse cx="23" cy="44" rx="7" ry="3.6" transform="rotate(-32 23 44)"/>
+              <ellipse cx="21" cy="57" rx="7" ry="3.6" transform="rotate(-8 21 57)"/>
+              <ellipse cx="97" cy="44" rx="7" ry="3.6" transform="rotate(32 97 44)"/>
+              <ellipse cx="99" cy="57" rx="7" ry="3.6" transform="rotate(8 99 57)"/>
+            </g>
+            <path d="M34 30c-13 0-17 13-8 19 4 3 9 3 12 1" fill="none"
+                  stroke="#e8a715" stroke-width="5.6" stroke-linecap="round"/>
+            <path d="M86 30c13 0 17 13 8 19-4 3-9 3-12 1" fill="none"
+                  stroke="#e8a715" stroke-width="5.6" stroke-linecap="round"/>
+            <path d="M34 24h52c0 24-8 39-18 42H52C42 63 34 48 34 24z"
+                  fill="url(#tg-cup)" stroke="#c47a00" stroke-width="2.4"/>
+            <path d="M54 66h12v13H54z" fill="url(#tg-cup)"/>
+            <path d="M42 79h36l4 10H38z" fill="url(#tg-cup)" stroke="#c47a00" stroke-width="2.2"/>
+            <rect x="33" y="89" width="54" height="10" rx="3.4"
+                  fill="url(#tg-cup)" stroke="#c47a00" stroke-width="2.2"/>
+            <path d="M60 31l2.8 7.1 7.7.5-5.9 4.9 1.9 7.4L60 46.8l-6.5 4.1 1.9-7.4-5.9-4.9 7.7-.5z"
+                  fill="#dd1f26"/>
+          </svg>
+        </div>
+
+        <p id="verdict"></p>
+        <p id="meraih"><span>Kamu meraih</span></p>
+
+        <div id="ticket">
+          <p class="th"><i>★</i>Hadiahmu<i>★</i></p>
+          <p id="prize-amount"></p>
+          <p id="prize-tier"></p>
+          <p id="prize-break"></p>
+        </div>
+
+        <div id="perks"></div>
+
+        <!-- #stats and #strip travel together: they are one grid cell in the
+             landscape layout, where sharing grid rows with the much taller ticket
+             would strand the strip below it -->
+        <div id="side">
+        <div id="stats">
+          <div class="rank">
+            <img class="por" id="stat-portrait" src="" alt="">
+            <span class="medal" id="medal"></span>
+            <b id="rank-no"></b>
+          </div>
+          <div class="time">
+            <span class="k">Waktu kamu</span>
+            <span class="v">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.6" r="7.9"/><path d="M12 9.8v3.8l2.6 1.7M9.4 2.6h5.2M12 2.6v3.1M18.8 6.2l1.6-1.6"/></svg>
+              <b id="stat-time"></b><em>detik</em>
+            </span>
+          </div>
+        </div>
+
+        <div id="strip"></div>
+        </div>
+      </div>
+
+      <p id="claim"><span>Hubungi tim Admission RevoU untuk klaim hadiah kamu!</span></p>
+
+      <div class="row">
+        <button class="btn ghost" id="btn-change">Ganti Karakter</button>
+      </div>
     </div>
   </div>
 
@@ -638,6 +957,106 @@ function loadPrize(){
   if(prize) return prize;
   try { prize = sessionStorage.getItem(PRIZE_KEY) || ""; } catch {}
   return prize;
+}
+
+/* ------------------------------------------------------ prize presentation */
+
+/* The endpoint hands the prize back as one free-text line — "Early Bird 2 juta +
+   BNSP + Exclusive Starter Kit" — and that is deliberate: Code.gs owns the table,
+   so the page keeps working when a row is reworded or a fourth one is added. The
+   reveal wants it in pieces though (a figure big enough to be the payoff, the
+   tier it belongs to, the perks as their own chips), so the line is taken apart
+   here rather than restructured server-side.
+
+   Every branch degrades to printing the line verbatim. A prize the parser has
+   never seen still reads correctly on the ticket — it just misses the big-figure
+   treatment, which is the right way round for something the sheet can change
+   without anyone touching this file. */
+
+/* One "+"-separated clause: the money in it, and the words left over — which are
+   what names the tier ("Early Bird 2 juta" -> 2000000 + "Early Bird"). The \b
+   after the unit is load-bearing: without it the K in "Exclusive Starter Kit"
+   reads as thousands. */
+function money(clause){
+  const take = (m, mul) => ({
+    rp: Math.round(parseFloat(m[1].replace(",", ".")) * mul),
+    rest: clause.replace(m[0], " "),
+  });
+  let m;
+  if((m = clause.match(/(\d+(?:[.,]\d+)?)\s*(?:juta|jt)\b/i)))  return take(m, 1e6);
+  if((m = clause.match(/(\d+(?:[.,]\d+)?)\s*(?:ribu|rb|k)\b/i))) return take(m, 1e3);
+  // already written out — the dots are thousand separators, not a decimal point
+  if((m = clause.match(/rp\.?\s*(\d[\d.]{3,})/i)))
+    return { rp: parseInt(m[1].replace(/\./g, ""), 10), rest: clause.replace(m[0], " ") };
+  return null;
+}
+
+function parsePrize(text){
+  const raw = String(text == null ? "" : text).trim();
+  const perks = [], parts = [];
+  let rp = 0, tier = "";
+  for(const clause of raw.split("+").map(s => s.trim()).filter(Boolean)){
+    const m = money(clause);
+    if(!m){ perks.push(clause); continue; }
+    const label = m.rest.replace(/\s+/g, " ").trim();
+    rp += m.rp;
+    if(label && !tier) tier = label;
+    parts.push({ label, rp: m.rp });
+  }
+  return { raw, rp, tier, perks, parts };
+}
+
+const groups = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const rupiah = n => "Rp" + groups(n);
+/* the prize line is remote text landing in innerHTML, so it is escaped on the way */
+const esc = s => String(s).replace(/[&<>"]/g,
+  c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+/* Stroke icons on a tinted tile, the same language as the HUD's gift chip. Order
+   matters: "Exclusive AI Class Library" answers to the kit pattern too, so the
+   more specific rows come first. Anything unrecognised gets a star, which is why
+   a new perk in the sheet needs no code change to look deliberate. */
+const PERK_ART = [
+  [/bnsp|sertifik|certif/i, "biru", '<path d="M12 2.6 4.7 5.4v5.9c0 4.5 3 8.3 7.3 9.8 4.3-1.5 7.3-5.3 7.3-9.8V5.4z"/><circle cx="12" cy="10" r="2.1"/><path d="M8.7 16.3a3.5 3.5 0 0 1 6.6 0"/>'],
+  [/librar|kelas|class|kurikul|modul/i, "biru", '<path d="M4 4.6h5.1A2.9 2.9 0 0 1 12 7.5v11a3.4 3.4 0 0 0-2.9-1.6H4z"/><path d="M20 4.6h-5.1A2.9 2.9 0 0 0 12 7.5v11a3.4 3.4 0 0 1 2.9-1.6H20z"/>'],
+  [/kit|merch|starter|gift|bonus/i, "kuning", '<path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8"/><rect x="2.4" y="7" width="19.2" height="5" rx="1"/><path d="M12 7v14M12 7S9.6 7 8.2 5.6 8.7 2.2 10.1 2.8 12 7 12 7zM12 7s2.4 0 3.8-1.4S15.3 2.2 13.9 2.8 12 7 12 7z"/>'],
+];
+const PERK_STAR = '<path d="M12 3.3l2.6 5.6 6.2.6-4.7 4.1 1.4 6.1L12 16.5l-5.5 3.2 1.4-6.1L3.2 9.5l6.2-.6z"/>';
+
+function perkChip(label){
+  const [, tint, art] = PERK_ART.find(a => a[0].test(label)) || [0, "kuning", PERK_STAR];
+  return `<span class="perk ${tint}">` +
+         `<i><svg viewBox="0 0 24 24" aria-hidden="true">${art}</svg></i>${esc(label)}</span>`;
+}
+
+function fillPrize(){
+  /* Everyone who finishes keeps the prize their email drew — placing does not
+     gate it, and neither does anything else: the ticket is never collapsed. It
+     used to be hidden whenever `prize` was falsy, which turned any hiccup in the
+     response into a results card with no payoff on it at all. */
+  const p = parsePrize(loadPrize() || (LEAD_ENDPOINT ? PRIZE_FALLBACK : setPrize(devDraw())));
+  const amt = $("prize-amount"), tier = $("prize-tier");
+
+  if(p.rp > 0){
+    amt.className = "";
+    amt.innerHTML = `<span class="rp">Rp</span><span class="n">${groups(p.rp)}</span>`;
+    tier.textContent = p.tier ? p.tier + " Prize" : "Hadiah Merdeka";
+    tier.style.display = "";
+    // two figures summed into one headline (SWE) get their split spelled out
+    $("prize-break").textContent = p.parts.length > 1
+      ? p.parts.map(x => (x.label || "Bonus") + " " + rupiah(x.rp)).join("  +  ")
+      : "";
+    $("perks").innerHTML = p.perks.map(perkChip).join('<span class="plus">+</span>');
+  } else {
+    /* No figure anywhere in the line, so there is nothing to headline and nothing
+       to call a perk either — every clause is already in the prose. Chipping them
+       as well is how PRIZE_FALLBACK ended up printed twice on the same card. */
+    amt.className = "text";
+    amt.textContent = p.raw || PRIZE_FALLBACK;
+    tier.style.display = "none";
+    $("prize-break").textContent = "";
+    $("perks").innerHTML = "";
+  }
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
@@ -1982,25 +2401,53 @@ function endRace(){
   const key = r => r.done ? r.time : 1e6 - r.x;
   const board = [...racers].sort((a,b) => key(a) - key(b));
   const meIdx = board.findIndex(r => r.human);
-  $("verdict").textContent = ["JUARA 1! 🏆", "Juara 2 👏", "Juara 3 🙂", "Belum beruntung 😅"][meIdx];
-  $("board").innerHTML = board.map((r, i) =>
-    `<div class="rowline${r.human ? " me" : ""}">
-       <span class="pos">${i + 1}</span>
-       <img src="sprites/${CHARS[r.ci].id}_hero.png" alt="">
-       <span>${CHARS[r.ci].name}</span>
-       <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
-     </div>`).join("");
-  /* Everyone who finishes keeps the prize their email drew — placing does not
-     gate it, and neither does anything else: this slot is never collapsed. It
-     used to be hidden whenever `prize` was falsy, which turned any hiccup in
-     the response into a results card with no payoff on it at all. */
-  $("prize-text").textContent =
-    loadPrize() || (LEAD_ENDPOINT ? PRIZE_FALLBACK : setPrize(devDraw()));
-  $("prize").style.display = "";
+  const me = board[meIdx];
+  const secs = r => r.done ? r.time.toFixed(2) : "";
+
+  /* Everyone who finishes wins something, so the banner congratulates at every
+     placing — first place just gets to say which one it was. The medal below
+     carries the actual result, which is why this does not need four variants. */
+  $("verdict").textContent = meIdx === 0 ? "Juara 1!" : "Selamat!";
+
+  $("medal").className = "medal m" + (meIdx + 1);
+  $("medal").textContent = meIdx + 1;
+  $("rank-no").textContent = "#" + (meIdx + 1);
+  $("stat-portrait").src = `sprites/${CHARS[me.ci].id}_hero.png`;
+  $("stat-time").textContent = secs(me) || "—";
+
+  /* A three-wide window centred on the player: who they were chasing and who was
+     chasing them is the whole story of the run. The full four-row board was more
+     table than the payoff needs, and on a short phone it pushed the figure —
+     which is the entire point of the campaign — below the fold. */
+  const from = clamp(meIdx - 1, 0, Math.max(0, board.length - 3));
+  $("strip").innerHTML = board.slice(from, from + 3).map(r =>
+    `<span class="e${r.human ? " me" : ""}">
+       <span class="p">${r.human ? "Kamu" : "#" + (board.indexOf(r) + 1) + " " + CHARS[r.ci].name}</span>
+       <span>${secs(r) ? secs(r) + "s" : "—"}</span>
+     </span>`).join('<span class="sep">•</span>');
+
+  fillPrize();
+  burstKonfeti();
   meIdx === 0 ? sfxWin() : sfxLose();
-  // the prize is the actual payload of the campaign, so it gets its own moment
+  // the prize is the actual payload of the campaign, so it gets its own moment —
+  // #ticket's entry animation is timed to land with this
   setTimeout(sfxPrize, 700);
   show("scr-done");
+}
+
+/* Pieces are generated rather than sitting in the markup so a replay re-fires the
+   burst: re-assigning innerHTML restarts every animation. 22 of them is the point
+   where it reads as a shower without the phone noticing. */
+function burstKonfeti(){
+  const cols = [KUNING_2, PUTIH, MERAH, "#4aa3e0", "#ff9a3d"];
+  let html = "";
+  for(let i = 0; i < 22; i++){
+    html += `<i style="left:${(i * 137.5 % 97).toFixed(1)}%;` +
+            `font-size:${9 + i % 4 * 4}px;background:${cols[i % cols.length]};` +
+            `animation-duration:${(2.3 + i % 5 * .55).toFixed(2)}s;` +
+            `animation-delay:${(i % 7 * .17).toFixed(2)}s"></i>`;
+  }
+  $("konfeti").innerHTML = html;
 }
 
 function toEmail(){
