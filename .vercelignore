@@ -1,0 +1,17 @@
+# Deploy only what the game loads at runtime: index.html, sprites/, assets/, fonts/.
+
+.venv/
+__pycache__/
+.DS_Store
+.claude/
+
+# Sprite-sheet sources — tools/extract_sprites.py turns these into sprites/.
+Characters.png
+Jump.png
+Ready.png
+Stand.png
+images/
+
+# Build-time only.
+tools/
+README.md
