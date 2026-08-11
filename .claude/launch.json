@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "taptapmerdeka",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "/Users/andrewcp/Documents/RevoU/AI Apps/TapTapMerdeka2/tools/serve.py"
+      ],
+      "port": 8123,
+      "autoPort": true
+    }
+  ]
+}

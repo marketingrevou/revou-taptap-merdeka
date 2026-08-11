@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Tap Tap Merdeka — Balap Karung</title>
+<style>
+  /* One 40 KB variable file covers every weight the design asks for (400-700),
+     self-hosted so index.html still opens straight off the filesystem. */
+  @font-face{
+    font-family:"IBM Plex Sans";
+    src:url("fonts/ibm-plex-sans-latin.woff2") format("woff2");
+    font-weight:100 700;font-style:normal;font-display:swap;
+  }
+
+  :root{
+    /* lifted from the Figma frame "DA Mystery Discount Box" (1749:2350) */
+    --merah:#dd1f26;
+    --merah-tua:#8f1419;
+    --bg-dalam:#f35e64;
+    --bg-tengah:#e83f45;
+    --bg-luar:#dd1f26;
+    --kuning-1:#fff3b6;
+    --kuning-2:#ffde3b;
+    --emas-bayang:#685020;      /* the badge's hard offset shadow */
+    --ink:#311f17;
+    --putih:#ffffff;
+    /* badge border + shadow, overridden inside the ad lockup so the whole
+       thing scales as one unit rather than each part clamping separately */
+    --badge-b:6px;
+    --badge-s:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:var(--bg-luar);
+            font-family:"IBM Plex Sans","Trebuchet MS",Verdana,system-ui,sans-serif;color:var(--ink)}
+  #stage{position:fixed;inset:0;overflow:hidden;touch-action:manipulation}
+  /* absolute, not a grid item: a percentage-sized canvas would otherwise be laid
+     out from its own intrinsic ratio, and resizing would feed back into itself */
+  canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+
+  /* the ad's backdrop. It sits *behind* the canvas and is always on: it backs the
+     menus (where render() skips the scene entirely) and it fills the letterbox
+     strips above and below the race band on tall screens. */
+  #backdrop{position:absolute;inset:0;
+            background:url("assets/bg-festival.jpg") center bottom/cover no-repeat,
+                       radial-gradient(ellipse 88.5% 96.9% at 50% 50%,
+                         var(--bg-dalam) 0%,var(--bg-tengah) 50%,var(--bg-luar) 100%)}
+  /* measured in JS: env() will not resolve through getComputedStyle on a custom
+     property, but it does resolve on a real declaration */
+  #safe{position:absolute;top:0;left:0;width:0;height:0;pointer-events:none;visibility:hidden;
+        padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+  .layer{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+         padding:clamp(12px,3vmin,32px);text-align:center;gap:clamp(10px,2.2vmin,22px)}
+  .layer.on{display:flex}
+  .layer.pass{pointer-events:none}
+  .layer.pass > *{pointer-events:auto}
+
+  .scrim{background:radial-gradient(120% 90% at 50% 40%,rgba(120,16,20,.42),rgba(48,10,12,.84))}
+
+  /* the gold card: white keyline, 7px corner, hard shadow — Figma node 1749:2900 */
+  .badge{background:linear-gradient(180deg,var(--kuning-1) 0%,var(--kuning-2) 100%);
+         border:var(--badge-b) solid var(--putih);border-radius:7px;
+         filter:drop-shadow(0 var(--badge-s) 0 var(--emas-bayang))}
+
+  /* stands in for the wordmark's outline-and-shadow treatment on plain headings.
+     Built from stacked shadows rather than -webkit-text-stroke: the stroke is
+     centred on the glyph edge, so at this weight it swallows the red fill. */
+  .display{font-weight:700;text-transform:uppercase;line-height:1.05;letter-spacing:.01em;
+           color:var(--merah);
+           text-shadow:-.055em -.055em 0 var(--putih), .055em -.055em 0 var(--putih),
+                       -.055em  .055em 0 var(--putih), .055em  .055em 0 var(--putih),
+                       -.078em 0 0 var(--putih), .078em 0 0 var(--putih),
+                       0 -.078em 0 var(--putih), 0 .078em 0 var(--putih),
+                       0 .17em 0 rgba(70,18,20,.32)}
+
+  h2{font-size:clamp(20px,4.4vmin,44px)}
+  p.hint{color:#5e3626;font-size:clamp(12px,2.1vmin,17px);font-weight:600;
+         text-shadow:0 0 7px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.95)}
+  .scrim p.hint{color:#f6e3d4;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+  /* ---- ad lockup: the title screen, rebuilt from the Figma frame ---------- */
+  /* --w is the wordmark width; every other size in the lockup is a ratio of it,
+     exactly as the 744px-wide lockup relates to the rest of the 1920x900 frame */
+  #scr-title{padding:0;gap:0;overflow:hidden}
+  /* the wordmark is the widest thing in the lockup; the badge under it runs about
+     .9x --w, since "Rp5,000,000!" sets its own width rather than the artwork's */
+  .ad{--w:min(46vw,88vh,744px);
+      --badge-b:max(5px,calc(var(--w) * .0134));
+      --badge-s:max(5px,calc(var(--w) * .0121));
+      display:flex;align-items:center;justify-content:center;gap:calc(var(--w) * .06);
+      width:100%;height:100%;padding:0 clamp(10px,2.5vw,56px)}
+  .ad-copy{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:calc(var(--w) * .035)}
+  /* 637 wide against the 744 lockup, and hanging 120px past the frame's
+     bottom edge — that overhang is what keeps it from being clipped at the top */
+  .ad-hero{flex:0 0 auto;width:calc(var(--w) * .856);align-self:flex-end;
+           margin-bottom:calc(var(--w) * -.16);
+           transform:rotate(2.65deg);transform-origin:50% 100%;
+           filter:drop-shadow(0 .04em .5em rgba(90,10,14,.35))}
+
+  /* two SVGs, overlapped at the ratios they sit at inside the 744x382 lockup */
+  .wordmark{position:relative;width:var(--w);aspect-ratio:744.151/381.83}
+  .wordmark img{position:absolute;display:block}
+  .wm-taptap{left:7.13%;top:0;width:81.41%}
+  .wm-merdeka{left:0;top:43.66%;width:100%}
+
+  .promo-card{display:flex;flex-direction:column;align-items:center;
+              gap:calc(var(--w) * .0121);padding:calc(var(--w) * .0403) calc(var(--w) * .0417)}
+  .promo-title{display:block;width:calc(var(--w) * .667)}
+  .promo-line{display:flex;align-items:center;justify-content:center;gap:calc(var(--w) * .0148);
+              color:var(--ink);font-weight:700;line-height:1.1;white-space:nowrap}
+  .promo-line span{font-size:calc(var(--w) * .035)}
+  .promo-line b{font-size:calc(var(--w) * .078)}
+
+  .cta{display:flex;flex-direction:column;align-items:center;gap:calc(var(--w) * .022);
+       margin-top:calc(var(--w) * .012)}
+  /* the CTA is not in the frame, so it is sized off --w to carry the same
+     weight as the badge above it rather than clamping on its own */
+  .cta .btn{font-size:calc(var(--w) * .042);padding:calc(var(--w) * .026) calc(var(--w) * .062)}
+  .cta .hint{font-size:calc(var(--w) * .028)}
+
+  /* portrait and small landscape: one centred column, hero art dropped so the
+     copy is never squeezed against it */
+  @media (max-width:900px),(max-height:520px){
+    .ad{--w:min(88vw,62vh);gap:0}
+    .ad-hero{display:none}
+  }
+
+  /* ---------------------------------------------------------------- buttons */
+  .btn{border:var(--badge-b) solid var(--putih);cursor:pointer;font:inherit;font-weight:700;
+       letter-spacing:.05em;text-transform:uppercase;border-radius:7px;
+       padding:clamp(9px,1.8vmin,15px) clamp(20px,4vmin,36px);
+       background:linear-gradient(180deg,var(--kuning-1) 0%,var(--kuning-2) 100%);
+       color:var(--ink);font-size:clamp(14px,2.4vmin,22px);
+       box-shadow:0 var(--badge-s) 0 var(--emas-bayang);
+       transition:transform .08s,box-shadow .08s}
+  .btn:active{transform:translateY(var(--badge-s));box-shadow:0 0 0 var(--emas-bayang)}
+  .btn.merah{background:var(--merah);color:var(--putih);box-shadow:0 var(--badge-s) 0 var(--merah-tua)}
+  .btn.merah:active{box-shadow:0 0 0 var(--merah-tua)}
+  .btn.ghost{background:var(--putih);color:var(--merah);box-shadow:0 var(--badge-s) 0 #b99a6a}
+  .btn.ghost:active{box-shadow:0 0 0 #b99a6a}
+  .row{display:flex;gap:clamp(8px,1.8vmin,16px);flex-wrap:wrap;justify-content:center}
+
+  /* ---- picker: a slider, one racer at a time, neighbours peeking in ------ */
+  /* the hero portraits are bust-length and much taller than they are wide, so
+     the frame is roomier than it was for the full-body vector sprites */
+  #carousel{position:relative;width:min(94vw,720px);height:clamp(190px,44vmin,390px);
+            touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  #carousel.grabbing{cursor:grabbing}
+  /* pool of light the chosen racer stands in */
+  #plinth{position:absolute;left:50%;bottom:-3%;width:clamp(150px,30vmin,270px);height:clamp(28px,5.6vmin,52px);
+          transform:translateX(-50%);border-radius:50%;pointer-events:none;
+          background:radial-gradient(closest-side,rgba(255,222,59,.62),rgba(255,222,59,.16) 62%,rgba(255,222,59,0))}
+  #track{position:absolute;inset:0}
+  .slide{position:absolute;left:50%;bottom:0;top:0;width:clamp(130px,27vmin,250px);
+         transform-origin:50% 100%;display:flex;align-items:flex-end;justify-content:center;
+         will-change:transform,opacity;
+         transition:transform .34s cubic-bezier(.22,.9,.26,1),opacity .34s,filter .34s}
+  #track.dragging .slide{transition:none}
+  .slide img{width:100%;height:100%;object-fit:contain;object-position:bottom;pointer-events:none;
+             filter:drop-shadow(0 .45em .5em rgba(0,0,0,.45))}
+  .slide.on img{animation:bob 2.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3%)}}
+
+  .arrow{position:absolute;top:50%;z-index:200;border:3px solid var(--putih);cursor:pointer;font:inherit;font-weight:700;
+         width:clamp(34px,5.6vmin,50px);height:clamp(34px,5.6vmin,50px);border-radius:999px;
+         background:var(--putih);color:var(--merah);font-size:clamp(20px,3.4vmin,30px);line-height:1;
+         box-shadow:0 .16em 0 rgba(104,80,32,.55);transform:translateY(-50%);transition:opacity .2s}
+  .arrow:active{transform:translateY(-46%) scale(.93)}
+  .arrow.dim{opacity:.28;pointer-events:none}
+  #prev{left:0} #next{right:0}
+
+  #nameplate{padding:calc(var(--badge-b) * .8) 1.5em;text-align:center}
+  #nameplate b{display:block;color:var(--ink);font-size:clamp(19px,3.6vmin,32px);letter-spacing:.03em;
+               text-transform:uppercase}
+  #nameplate i{display:block;font-style:normal;color:var(--merah);margin-top:.15em;font-weight:600;
+               font-size:clamp(10px,1.8vmin,15px);letter-spacing:.14em;text-transform:uppercase}
+  #nameplate.pop{animation:pop .3s ease both}
+  @keyframes pop{from{opacity:0;transform:translateY(7px) scale(.96)}to{opacity:1;transform:none}}
+
+  #dots{display:flex;gap:8px}
+  #dots button{border:0;padding:0;cursor:pointer;width:9px;height:9px;border-radius:999px;
+               background:rgba(255,255,255,.7);box-shadow:0 1px 0 rgba(104,80,32,.4);
+               transition:width .22s,background .22s}
+  #dots button.on{width:26px;background:var(--kuning-2)}
+
+  #tapzone{position:absolute;inset:0;display:none}
+  #tapzone.on{display:block}
+
+  #results{padding:clamp(12px,2.6vmin,26px);min-width:min(88vw,460px);border-radius:10px}
+  #results .rowline{display:flex;align-items:center;gap:.7em;padding:.4em .6em;border-radius:6px;
+                    font-size:clamp(12px,2.1vmin,18px);font-weight:600}
+  #results .rowline.me{background:var(--putih);font-weight:700;box-shadow:inset .3em 0 0 var(--merah)}
+  #results .rowline span:nth-child(2){flex:1;text-align:left}
+  #results .pos{width:1.9em;text-align:center;font-weight:700;color:var(--merah)}
+  #results img{height:clamp(30px,5vmin,46px);object-fit:contain;object-position:bottom}
+  .verdict{font-size:clamp(22px,5vmin,42px);margin-bottom:.35em}
+
+  /* the frame places it at 116px on 1920 wide, 50/55 in from the corner */
+  /* above the picker slides, which layoutPicker() stacks up to z-index 100 */
+  #brandmark{position:absolute;top:clamp(10px,2.9vw,55px);left:clamp(10px,2.6vw,50px);z-index:400;
+             width:clamp(38px,6vw,116px);height:auto;pointer-events:none;
+             filter:drop-shadow(0 2px 5px rgba(90,10,14,.3))}
+  #stage.racing #brandmark{display:none}
+  #mute{position:absolute;top:clamp(8px,1.6vmin,16px);right:clamp(8px,1.6vmin,16px);z-index:400;border:0;cursor:pointer;
+        background:var(--putih);color:var(--merah);border-radius:999px;
+        width:clamp(32px,5vmin,44px);height:clamp(32px,5vmin,44px);
+        font-size:clamp(15px,2.4vmin,21px);line-height:1;box-shadow:0 3px 0 rgba(104,80,32,.5)}
+  /* no "please rotate your phone" nag: portrait letterboxes the race instead */
+  .fade{animation:fade .35s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="safe" aria-hidden="true"></div>
+  <!-- behind the canvas: it backs the menus, and shows through the letterbox
+       strips once the race is banded -->
+  <div id="backdrop"></div>
+  <canvas id="game"></canvas>
+
+  <div class="layer on" id="scr-title">
+    <div class="ad">
+      <div class="ad-copy">
+        <div class="wordmark">
+          <img class="wm-taptap" src="assets/wordmark-taptap.svg" alt="">
+          <img class="wm-merdeka" src="assets/wordmark-merdeka.svg" alt="Tap Tap Merdeka">
+        </div>
+        <div class="badge promo-card">
+          <img class="promo-title" src="assets/diskon-program.svg" alt="Diskon Program">
+          <p class="promo-line"><span>sampai dengan</span><b>Rp5,000,000!</b></p>
+        </div>
+        <div class="cta">
+          <button class="btn merah" id="btn-play">Mulai</button>
+          <p class="hint">Ketuk layar / tekan SPASI untuk melompat</p>
+        </div>
+      </div>
+      <img class="ad-hero" src="sprites/adik_hero.png" alt="">
+    </div>
+  </div>
+
+  <div class="layer" id="scr-select">
+    <h2 class="display">Pilih Pelompatmu</h2>
+    <div id="carousel">
+      <div id="plinth"></div>
+      <div id="track"></div>
+      <button class="arrow" id="prev" aria-label="Sebelumnya">‹</button>
+      <button class="arrow" id="next" aria-label="Berikutnya">›</button>
+    </div>
+    <div id="nameplate" class="badge"><b id="pick-name"></b><i id="pick-tag"></i></div>
+    <div id="dots"></div>
+    <button class="btn merah" id="btn-go">Ayo Balap!</button>
+    <p class="hint">Geser untuk memilih — kamu melawan 3 peserta lainnya</p>
+  </div>
+
+  <div class="layer pass" id="scr-race"></div>
+  <div id="tapzone"></div>
+
+  <div class="layer scrim" id="scr-done">
+    <div id="results" class="badge fade">
+      <div class="verdict display" id="verdict"></div>
+      <div id="board"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="btn-again">Main Lagi</button>
+      <button class="btn ghost" id="btn-change">Ganti Karakter</button>
+    </div>
+  </div>
+
+  <img id="brandmark" src="assets/revou-logo.png" alt="RevoU">
+  <button id="mute" title="Suara">🔊</button>
+</div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ data -- */
+
+const CHARS = [
+  {id:"bapak", name:"Bapak",  tag:"Langkah mantap"},
+  {id:"ibu",   name:"Ibu",    tag:"Gesit & lincah"},
+  {id:"adik",  name:"Adik",   tag:"Kecil tapi cepat"},
+  {id:"kakak", name:"Kakak",  tag:"Penuh semangat"},
+];
+const POSES = ["stand","ready","jump"];
+
+const RACE_LEN   = 2400;   // world px from start line to finish line
+const HOP_TIME   = 0.30;   // seconds airborne
+const HOP_DIST   = 62;     // world px covered per hop
+const PERFECT    = 0.18;   // tap this soon after landing for a combo
+const BUFFER     = 0.10;   // a tap this close before landing still counts
+const COMBO_MAX  = 12;
+const RUNOUT     = 520;    // world px of track past the finish line
+const START_X    = 170;   // racers line up here, so the start gate stays in frame
+const CAM_MIN    = -170;
+
+/* the same tokens the stylesheet uses, so the drawn HUD and the DOM chrome
+   stay one design rather than two that drift apart */
+const FONT      = '"IBM Plex Sans","Trebuchet MS",sans-serif';
+const MERAH     = "#dd1f26";
+const MERAH_TUA = "#8f1419";
+const KUNING_1  = "#fff3b6";
+const KUNING_2  = "#ffde3b";
+const EMAS_BAYANG = "#685020";
+const INK       = "#311f17";
+const PUTIH     = "#ffffff";
+
+const img = {};            // "bapak_stand" -> Image
+
+/* ------------------------------------------------------------- boilerplate */
+
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const lerp  = (a,b,t) => a + (b-a) * t;
+const rnd   = (a,b) => a + Math.random() * (b-a);
+
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+let W = 1280, H = 720, SS = 720, dpr = 1;   // SS = scene scale, keeps portrait sane
+
+/* The race is a horizontal chase, so a tall viewport spends its height on sky
+   while hiding the track the drama actually lives on: fitting 1280x720 of world
+   into a 9:16 frame leaves only ~560 world px across, not enough to see the pack.
+   So anything narrower than BAND_ASPECT gets the race letterboxed into a band,
+   and the strips left over become the HUD and the thumb zone. */
+const BAND_ASPECT = 1.5;
+let SW = 0, SH = 0;               // viewport, CSS px
+let bandTop = 0, bandH = 0;       // the race band on screen, CSS px (always full width)
+let letterboxed = false;
+let HS = 1;                       // HUD scale — CSS px per design px
+let safeT = 0, safeB = 0;         // notch / home-indicator insets, CSS px
+
+// env() does not resolve through getComputedStyle on a custom property, so read
+// it off an element that actually applies it
+const safeEl = document.getElementById("safe");
+function readInsets(){
+  const cs = getComputedStyle(safeEl);
+  safeT = parseFloat(cs.paddingTop) || 0;
+  safeB = parseFloat(cs.paddingBottom) || 0;
+}
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  if(!r.width || !r.height) return;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const px = Math.round(r.width * dpr), py = Math.round(r.height * dpr);
+  if(px === cv.width && py === cv.height) return;   // nothing changed
+  cv.width = px; cv.height = py;
+  SW = r.width; SH = r.height;
+  readInsets();
+
+  bandH = Math.min(SH, SW / BAND_ASPECT);
+  letterboxed = bandH < SH - 1;
+  // dock the band high — the strip above takes the HUD, and everything below it
+  // is thumb country on a phone held one-handed
+  const strip = Math.max(0, SH - bandH);
+  bandTop = letterboxed ? Math.max(Math.min(strip, 104 + safeT), strip * .3) : 0;
+
+  // ~1280x720 of world space across the band; wider bands zoom out no further,
+  // narrower ones zoom in rather than letting the view grow endlessly tall
+  W = clamp(Math.round(720 * SW / bandH), 560, 1280);
+  H = Math.round(W * bandH / SW);
+  SS = Math.min(H, W * .65);
+  // docked chrome is sized against the viewport, not the band: band-relative
+  // sizes would render it postage-stamp small inside a short letterbox strip
+  HS = letterboxed ? clamp(SW / 520, .6, 1.1) : (SS / 720) * (SW / W);
+
+  bandSpace();
+}
+window.addEventListener("resize", resize);
+
+// world space maps onto the band; screen space is plain CSS pixels
+function bandSpace(){ const s = (SW * dpr) / W; ctx.setTransform(s, 0, 0, s, 0, bandTop * dpr); }
+function screenSpace(){ ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+
+const $ = id => document.getElementById(id);
+const show = id => {
+  ["scr-title","scr-select","scr-race","scr-done"].forEach(s => $(s).classList.toggle("on", s === id));
+  $("tapzone").classList.toggle("on", id === "scr-race");
+  // the logo shares the top-left corner with the race HUD, so it steps aside
+  $("stage").classList.toggle("racing", id === "scr-race");
+};
+
+/* -------------------------------------------------------------------- audio */
+
+let actx = null, muted = false;
+function beep(freq, dur, type="square", vol=.06, slide=0){
+  if(muted) return;
+  if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  const t = actx.currentTime;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(actx.destination);
+  o.start(t); o.stop(t + dur + .02);
+}
+const sfxHop     = () => beep(300, .10, "square", .05, 260);
+const sfxPerfect = () => { beep(660, .09, "square", .05); setTimeout(()=>beep(990,.10,"square",.045), 60); };
+const sfxLand    = () => beep(120, .07, "triangle", .05, -60);
+const sfxWhistle = () => { beep(880,.12,"square",.06); setTimeout(()=>beep(1320,.18,"square",.06),130); };
+const sfxWin     = () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,"triangle",.07), i*130));
+const sfxLose    = () => [440,392,330].forEach((f,i)=>setTimeout(()=>beep(f,.26,"triangle",.06), i*160));
+
+$("mute").onclick = () => { muted = !muted; $("mute").textContent = muted ? "🔇" : "🔊"; };
+
+/* --------------------------------------------------------------- the racers */
+
+let state = "title";     // title | select | countdown | race | finish
+let pick = 0;
+let racers = [], camX = CAM_MIN, clock = 0, anim = 0, countdown = 0, finishAt = 0, flash = 0;
+let banner = null;       // {text, life}
+const puffs = [];
+
+function makeRacers(){
+  const order = [pick, ...CHARS.map((_,i)=>i).filter(i => i !== pick)];
+  racers = order.map((ci, lane) => ({
+    ci, lane,                      // lane 0 = nearest the camera = the player
+    human: lane === 0,
+    x: START_X, y: 0,
+    air: false, hopT: 0, groundT: 9, combo: 0, hops: 0, lock: 0, wasted: 0,
+    dist: HOP_DIST * rnd(.97, 1.03),
+    skill: 0,                      // filled in below for the CPUs
+    wait: 0, buffered: false,
+    done: false, time: 0, place: 0,
+  }));
+  racers.forEach(r => {
+    if(r.human) return;
+    r.skill = rnd(.25, .90);                     // how tight their rhythm is
+    r.wait  = lerp(.39, .152, r.skill);          // pause on the ground per hop
+  });
+  camX = CAM_MIN; clock = 0; finishAt = 0; puffs.length = 0; banner = null;
+}
+
+function hop(r){
+  r.air = true; r.hopT = 0; r.hops++;
+  const perfect = r.groundT <= PERFECT;
+  r.combo = perfect ? Math.min(r.combo + 1, COMBO_MAX) : 0;
+  r.step = r.dist * (1 + r.combo * .028);
+  if(r.human){
+    perfect && r.combo > 1 ? sfxPerfect() : sfxHop();
+    if(perfect && r.combo > 0 && r.combo % 4 === 0) banner = {text:"MANTAP! x" + r.combo, life:1};
+  }
+}
+
+function tap(){
+  if(state !== "race") return;
+  const r = racers[0];
+  if(r.done) return;
+  if(!r.air){
+    if(r.lock <= 0) hop(r);
+  } else if(HOP_TIME - r.hopT <= BUFFER){
+    r.buffered = true;              // forgiving early tap, still counts as in-rhythm
+  } else {
+    r.combo = 0;                    // way too early: you trip over the sack
+    r.wasted++;
+  }
+}
+
+function land(r){
+  r.air = false; r.hopT = 0; r.groundT = 0;
+  if(r.wasted){ r.lock = .11 + Math.min(r.wasted, 2) * .045; r.buffered = false; r.wasted = 0; }
+  if(r.human) sfxLand();
+  for(let i=0; i<5; i++) puffs.push({
+    x: r.x - 14 + rnd(-8,8), y: 0, lane: r.lane,
+    vx: rnd(-26,-70), vy: rnd(-12,-52), life: rnd(.35,.6), age: 0, r: rnd(5,11),
+  });
+}
+
+function step(dt){
+  if(state === "countdown"){
+    const was = Math.ceil(countdown);
+    countdown -= dt;
+    const now = Math.ceil(countdown);
+    if(now !== was && now >= 0) now === 0 ? sfxWhistle() : beep(440, .12, "square", .05);
+    if(countdown <= 0){ state = "race"; clock = 0; }
+    racers.forEach(r => { r.groundT += dt; });
+    return;
+  }
+  if(state !== "race" && state !== "finish") return;
+
+  clock += dt;
+
+  for(const r of racers){
+    if(r.done){
+      r.air = false; r.y = 0;
+      r.x = Math.min(r.x + 130 * dt, RACE_LEN + RUNOUT - 80);
+      continue;
+    }
+
+    if(r.air){
+      r.hopT += dt;
+      const k = clamp(r.hopT / HOP_TIME, 0, 1);
+      r.x += (r.step / HOP_TIME) * dt;
+      r.y = Math.sin(k * Math.PI) * 26;            // extra arc on top of the sprite lift
+      if(r.hopT >= HOP_TIME){
+        land(r);
+        if(r.buffered && r.lock <= 0){ r.buffered = false; hop(r); }
+      }
+    } else {
+      r.groundT += dt;
+      r.lock = Math.max(0, r.lock - dt);
+      r.y = 0;
+      if(!r.human){
+        // rubber band, tilted the player's way: the pack barely presses when
+        // you lead, and eases off noticeably when you fall behind
+        const gap = racers[0].x - r.x;
+        const w = clamp(r.wait - gap * (gap > 0 ? .00066 : .00042), .15, .85);
+        if(r.groundT >= w) hop(r);
+      }
+    }
+
+    if(r.x >= RACE_LEN && !r.done){
+      r.done = true; r.time = clock;
+      r.place = racers.filter(o => o.done).length;
+      if(r.human){
+        finishAt = clock; flash = 1;
+        state = "finish";
+        banner = {text: r.place === 1 ? "JUARA!" : "FINIS!", life: 1.6};
+      }
+    }
+  }
+
+  // camera: keeps the player a third of the way in, stops at the finish gate
+  const target = clamp(racers[0].x - W * .32, CAM_MIN, RACE_LEN + RUNOUT - W);
+  camX = lerp(camX, target, 1 - Math.pow(.0009, dt));
+
+  for(let i = puffs.length - 1; i >= 0; i--){
+    const p = puffs[i];
+    p.age += dt;
+    if(p.age >= p.life){ puffs.splice(i,1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt;
+  }
+  if(banner){ banner.life -= dt; if(banner.life <= 0) banner = null; }
+  if(flash > 0) flash -= dt * 1.6;
+
+  const allIn = racers.every(r => r.done);
+  if(state === "finish" && (allIn || clock - finishAt > 3.6)) endRace();
+}
+
+/* ------------------------------------------------------------------ drawing */
+
+const ground = () => Math.min(H - SS * .06, H * .84);
+function laneY(lane){ return ground() - lane * (SS * .09); }
+function laneScale(lane){ return 1 - lane * .07; }
+function laneOff(lane){ return lane * 55 * (SS / 720); }   // far lanes sit further left
+const horizon = () => laneY(3) - SS * .085;
+
+function drawSky(){
+  const g = ctx.createLinearGradient(0, 0, 0, horizon());
+  g.addColorStop(0, "#63bce8"); g.addColorStop(.65, "#a8dcf2"); g.addColorStop(1, "#e2f2e0");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizon() + 2);
+
+  ctx.fillStyle = "rgba(255,244,190,.95)";
+  ctx.beginPath(); ctx.arc(W * .82, horizon() * .28, SS * .062, 0, 7); ctx.fill();
+
+  ctx.fillStyle = "rgba(255,255,255,.85)";
+  for(let i = 0; i < 7; i++){
+    const cx = ((i * 430 - camX * .18) % (W + 700) + W + 700) % (W + 700) - 250;
+    const cy = horizon() * (.14 + (i % 3) * .12), s = SS * (.028 + (i % 2) * .012);
+    ctx.beginPath();
+    ctx.arc(cx, cy, s, 0, 7); ctx.arc(cx + s * 1.1, cy + s * .2, s * .78, 0, 7);
+    ctx.arc(cx - s * 1.05, cy + s * .25, s * .66, 0, 7); ctx.fill();
+  }
+}
+
+function drawHills(){
+  const base = horizon() + 8;
+  ctx.fillStyle = "#7fb98a";
+  for(let i = 0; i < 9; i++){
+    const cx = ((i * 340 - camX * .35) % 3060 + 3060) % 3060 - 400;
+    ctx.beginPath();
+    ctx.moveTo(cx - 260, base); ctx.quadraticCurveTo(cx, base - SS * .17, cx + 260, base); ctx.fill();
+  }
+  ctx.fillStyle = "#69a878";
+  for(let i = 0; i < 7; i++){
+    const cx = ((i * 470 - camX * .45) % 3290 + 3290) % 3290 - 400;
+    ctx.beginPath();
+    ctx.moveTo(cx - 300, base); ctx.quadraticCurveTo(cx, base - SS * .1, cx + 300, base); ctx.fill();
+  }
+}
+
+function tree(x, y, s){
+  ctx.fillStyle = "#8a6a4a";
+  ctx.fillRect(x - 4 * s, y - 26 * s, 8 * s, 26 * s);
+  ctx.fillStyle = "#4f9c5c";
+  ctx.beginPath(); ctx.arc(x, y - 40 * s, 20 * s, 0, 7);
+  ctx.arc(x - 16 * s, y - 30 * s, 14 * s, 0, 7); ctx.arc(x + 16 * s, y - 31 * s, 15 * s, 0, 7); ctx.fill();
+}
+
+function drawCrowd(){
+  const y = horizon() + 14, s = SS / 720;
+  for(let i = 0; i < 26; i++){
+    const wx = i * 190 + 60;
+    const x = wx - camX * .62;
+    if(x < -80 || x > W + 80) continue;
+    if(i % 4 === 0){ tree(x, y, s * 1.15); continue; }
+    // little onlookers in red & white
+    for(let k = 0; k < 3; k++){
+      const px = x + k * 22 * s, ph = (16 + (i + k) % 5 * 3) * s;
+      ctx.fillStyle = (i + k) % 2 ? "#d8232a" : "#fdfaf5";
+      ctx.fillRect(px, y - ph, 12 * s, ph);
+      ctx.fillStyle = "#f0c39a";
+      ctx.beginPath(); ctx.arc(px + 6 * s, y - ph - 6 * s, 6 * s, 0, 7); ctx.fill();
+      ctx.fillStyle = "#2b2118";
+      ctx.beginPath(); ctx.arc(px + 6 * s, y - ph - 8 * s, 6 * s, Math.PI, 0); ctx.fill();
+    }
+  }
+}
+
+function drawBunting(){
+  const s = SS / 720, span = 96 * s, top = Math.max(SS * .02, horizon() * .12);
+  ctx.strokeStyle = "rgba(60,40,30,.55)"; ctx.lineWidth = 2 * s;
+  ctx.beginPath();
+  for(let x = -span; x < W + span; x += span){
+    const off = -((camX * .8) % span);
+    ctx.moveTo(x + off, top); ctx.quadraticCurveTo(x + off + span / 2, top + 16 * s, x + off + span, top);
+  }
+  ctx.stroke();
+  let i = Math.floor(camX * .8 / span);
+  for(let x = -span; x < W + span; x += span, i++){
+    const off = -((camX * .8) % span), fx = x + off + span / 2;
+    ctx.fillStyle = i % 2 ? MERAH : PUTIH;
+    ctx.beginPath();
+    ctx.moveTo(fx - 15 * s, top + 8 * s); ctx.lineTo(fx + 15 * s, top + 8 * s); ctx.lineTo(fx, top + 42 * s);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawField(){
+  const top = horizon();
+  const g = ctx.createLinearGradient(0, top, 0, H);
+  g.addColorStop(0, "#8dc98a"); g.addColorStop(1, "#5e9e5c");
+  ctx.fillStyle = g; ctx.fillRect(0, top, W, H - top);
+
+  // lane strips, nearest lane last so it sits on top
+  for(let lane = 3; lane >= 0; lane--){
+    const y = laneY(lane), h = SS * .09;
+    ctx.fillStyle = lane % 2 ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.05)";
+    ctx.fillRect(0, y - h + 6, W, h);
+    ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, y + 6); ctx.lineTo(W, y + 6); ctx.stroke();
+  }
+
+  // distance ticks every 100 world px
+  ctx.font = `bold ${Math.round(SS*.021)}px ${FONT}`;
+  ctx.textAlign = "center";
+  for(let wx = START_X; wx <= RACE_LEN; wx += 100){
+    const x = wx - camX;
+    if(x < -60 || x > W + 60) continue;
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.fillRect(x - 2, laneY(3) - 4, 4, 12);
+    const pct = Math.round((wx - START_X) / (RACE_LEN - START_X) * 100);
+    if(pct % 25 === 0 && pct > 0 && pct < 100){
+      ctx.fillStyle = "rgba(255,255,255,.8)";
+      ctx.fillText(pct + "%", x, laneY(3) - 10);
+    }
+  }
+}
+
+/* Lines run across all four lanes, so they slant with the same offset the
+   racers are drawn at: far lane up and to the left, near lane down-right. */
+function laneSpan(worldX){
+  return {
+    fx: worldX - camX - laneOff(3), fy: laneY(3) - SS * .02,
+    nx: worldX - camX + laneOff(0), ny: laneY(0) + SS * .022,
+  };
+}
+
+function drawStartLine(){
+  const p = laneSpan(START_X);
+  if(p.nx < -60 || p.fx > W + 60) return;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,.85)";
+  ctx.lineWidth = 7 * (SS / 720); ctx.setLineDash([16, 12]);
+  ctx.beginPath(); ctx.moveTo(p.fx, p.fy); ctx.lineTo(p.nx, p.ny); ctx.stroke();
+  ctx.restore();
+}
+
+function drawFinish(){
+  const p = laneSpan(RACE_LEN);
+  if(p.nx < -320 || p.fx > W + 320) return;
+  const s = SS / 720;
+
+  // chequered ribbon on the grass
+  ctx.save();
+  ctx.lineWidth = 11 * s; ctx.lineCap = "butt";
+  ctx.setLineDash([13 * s, 13 * s]);
+  for(const [col, off] of [[PUTIH, 0], [INK, 13 * s]]){
+    ctx.strokeStyle = col; ctx.lineDashOffset = off;
+    ctx.beginPath(); ctx.moveTo(p.fx, p.fy); ctx.lineTo(p.nx, p.ny); ctx.stroke();
+  }
+  ctx.restore();
+
+  // gantry: banner slung between a near and a far pole
+  const bh = 68 * s, by = p.fy - 235 * s, bx = p.fx - 26 * s, bw = (p.nx - p.fx) + 52 * s;
+  ctx.fillStyle = "#8a6a4a";
+  ctx.fillRect(p.fx - 6 * s, by + bh, 11 * s, p.fy - by - bh);
+  ctx.fillStyle = "#7d5a3c";
+  ctx.fillRect(p.nx - 8 * s, by + bh * .5, 15 * s, p.ny - by - bh * .5);
+  ctx.fillStyle = MERAH; ctx.fillRect(bx, by, bw, bh * .56);
+  ctx.fillStyle = PUTIH; ctx.fillRect(bx, by + bh * .56, bw, bh * .44);
+  ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = KUNING_2;
+  ctx.font = `bold ${Math.round(34*s)}px ${FONT}`;
+  ctx.fillText("FINIS", bx + bw / 2, by + bh * .29);
+  ctx.fillStyle = MERAH;
+  ctx.font = `bold ${Math.round(20*s)}px ${FONT}`;
+  ctx.fillText("17 AGUSTUS", bx + bw / 2, by + bh * .79);
+  ctx.textBaseline = "alphabetic";
+}
+
+// idle sways between Stand and Ready; mid-race it is Ready on the ground,
+// Jump in the air
+const idlePose = () => (Math.floor(anim * 2.4) % 2) ? "ready" : "stand";
+function poseOf(r){
+  if(r.air) return "jump";
+  if(state === "race" || state === "finish") return r.done ? idlePose() : "ready";
+  return idlePose();
+}
+
+function drawRacer(r){
+  const key = CHARS[r.ci].id + "_" + poseOf(r);
+  const im = img[key];
+  const sc = laneScale(r.lane), base = laneY(r.lane);
+  const h = SS * .215 * sc;
+  const w = im ? im.width / im.height * h : h * .4;
+  const x = r.x - camX - laneOff(r.lane), y = base - r.y * sc;
+
+  // shadow shrinks as the racer rises
+  const lift = (r.air ? .55 : 0) + r.y / 40;
+  ctx.save();
+  ctx.fillStyle = "rgba(30,50,25,.26)";
+  ctx.beginPath();
+  ctx.ellipse(x, base + 4, w * .3 * (1 - lift * .3), h * .045 * (1 - lift * .25), 0, 0, 7);
+  ctx.fill();
+  ctx.restore();
+
+  if(im) ctx.drawImage(im, Math.round(x - w / 2), Math.round(y - h), Math.round(w), Math.round(h));
+
+  if(r.human && state !== "title"){
+    const ay = y - h - 16 - Math.sin(anim * 6) * 4;
+    ctx.beginPath();
+    ctx.moveTo(x, ay + 15); ctx.lineTo(x - 13, ay - 5); ctx.lineTo(x + 13, ay - 5);
+    ctx.closePath();
+    ctx.fillStyle = KUNING_2; ctx.fill();
+    ctx.strokeStyle = MERAH; ctx.lineWidth = 3; ctx.stroke();
+  }
+}
+
+function drawPuffs(){
+  for(const p of puffs){
+    const k = 1 - p.age / p.life;
+    ctx.fillStyle = `rgba(226,214,190,${.5 * k})`;
+    ctx.beginPath();
+    ctx.arc(p.x - camX - laneOff(p.lane), laneY(p.lane) - p.y, p.r * (1.4 - k * .5) * laneScale(p.lane), 0, 7);
+    ctx.fill();
+  }
+}
+
+// near bank of grass in front of the track, for depth
+function drawForeground(){
+  const s = SS / 720, top = Math.max(laneY(0) + 34 * s, H - 90 * s);
+  if(top >= H) return;
+  const shift = -((camX * 1.18) % 160);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-20, H);
+  ctx.lineTo(-20, top);
+  for(let x = -20; x <= W + 180; x += 80){
+    ctx.quadraticCurveTo(x + 20 + shift, top - 11 * s, x + 80 + shift, top);
+  }
+  ctx.lineTo(W + 180, H);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, top, 0, H);
+  g.addColorStop(0, "#57a35a"); g.addColorStop(1, "#3f8144");
+  ctx.fillStyle = g; ctx.fill();
+
+  ctx.clip();
+  ctx.fillStyle = "rgba(46,100,50,.75)";
+  for(let i = 0; i < 70; i++){
+    const wx = i * 58 + (i % 7) * 9;
+    const x = ((wx - camX * 1.18) % 4060 + 4060) % 4060 - 260;
+    if(x < -30 || x > W + 30) continue;
+    const h = (13 + (i % 4) * 7) * s, yb = top + (2 + (i % 3) * 7) * s;
+    ctx.beginPath();
+    ctx.moveTo(x - 5 * s, yb);
+    ctx.quadraticCurveTo(x - 1 * s, yb - h, x + 6 * s, yb - h * .8);
+    ctx.quadraticCurveTo(x + 1 * s, yb - h * .35, x + 5 * s, yb);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* the drawn twin of the .badge class: gold gradient, white keyline, hard
+   offset shadow. Everything the HUD frames is built out of this one shape. */
+function badgePanel(x, y, w, h, r){
+  const b = Math.max(2, r * .42), sh = r * .62;
+  ctx.fillStyle = EMAS_BAYANG;
+  roundRect(x, y + sh, w, h, r); ctx.fill();
+  ctx.fillStyle = PUTIH;
+  roundRect(x, y, w, h, r); ctx.fill();
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, KUNING_1); g.addColorStop(1, KUNING_2);
+  ctx.fillStyle = g;
+  roundRect(x + b, y + b, w - b * 2, h - b * 2, Math.max(1, r - b)); ctx.fill();
+}
+
+/* Docked chrome — place/time/combo and the progress rail. Drawn in screen pixels
+   at HS, so on a letterboxed phone it fills the strip above the band instead of
+   shrinking with it. Full-screen layout is unchanged: panel top-left, rail
+   centred beside it. Letterboxed, the two stack, because a 168px panel and a
+   centred rail collide once the viewport is only ~375px wide. */
+function drawDock(){
+  const me = racers[0], s = HS, pad = 20 * s;
+  // a shallow letterbox has no room to stack, so fall back to the overlay layout
+  const stacked = letterboxed && bandTop >= 118 * s;
+  const top = stacked ? Math.max(safeT + 8, (bandTop - 125 * s) / 2) : pad;
+  const panelY = stacked ? top + 25 * s : top - 6 * s;
+
+  // stacked, the rail runs nearly full width but stops clear of the mute button
+  const rw = stacked ? SW - 112 * s : SW * .46;
+  const rx = stacked ? 20 * s : (SW - rw) / 2;
+  const ry = stacked ? top : top + 6 * s;
+  const rh = 16 * s;
+  ctx.fillStyle = "rgba(104,80,32,.55)"; roundRect(rx, ry + 4 * s, rw, rh, rh / 2); ctx.fill();
+  ctx.fillStyle = PUTIH; roundRect(rx, ry, rw, rh, rh / 2); ctx.fill();
+  ctx.fillStyle = MERAH;
+  roundRect(rx + rw - 6 * s, ry + 3 * s, 4 * s, rh - 6 * s, 2); ctx.fill();
+  for(const r of racers){
+    const t = clamp((r.x - START_X) / (RACE_LEN - START_X), 0, 1);
+    ctx.fillStyle = r.human ? KUNING_2 : "rgba(49,31,23,.32)";
+    ctx.beginPath(); ctx.arc(rx + t * rw, ry + rh / 2, (r.human ? 9 : 5) * s, 0, 7); ctx.fill();
+    if(r.human){ ctx.strokeStyle = MERAH; ctx.lineWidth = 2.5 * s; ctx.stroke(); }
+  }
+
+  const place = 1 + racers.filter(o => o.x > me.x).length;
+  badgePanel(pad - 10 * s, panelY, 168 * s, (me.combo > 1 ? 100 : 74) * s, 10 * s);
+  ctx.textAlign = "left"; ctx.fillStyle = INK;
+  ctx.font = `bold ${Math.round(34*s)}px ${FONT}`;
+  ctx.fillText(["", "1st", "2nd", "3rd", "4th"][place], pad, panelY + 38 * s);
+  ctx.font = `bold ${Math.round(20*s)}px ${FONT}`;
+  ctx.fillText(clock.toFixed(1) + "s", pad, panelY + 64 * s);
+  if(me.combo > 1){
+    ctx.fillStyle = MERAH;
+    ctx.fillText("Combo x" + me.combo, pad, panelY + 90 * s);
+  }
+}
+
+/* A white keyline top and bottom, so the band reads as a deliberate window onto
+   the race rather than a crop that ran out of room. */
+function drawBandFrame(){
+  const k = Math.max(2, 3 * HS);
+  ctx.fillStyle = PUTIH;
+  ctx.fillRect(0, bandTop - k, SW, k);
+  ctx.fillRect(0, bandTop + bandH, SW, k);
+  ctx.fillStyle = EMAS_BAYANG;
+  ctx.fillRect(0, bandTop + bandH + k, SW, k * .8);
+}
+
+/* The strip below the band is thumb country, so it carries the tap target as a
+   full-width control surface rather than a button floating in dead backdrop.
+   It doubles as a rhythm cue: bright the moment the racer lands and is ready for
+   the next hop, dim while airborne or tripped. */
+function drawTapPad(){
+  const me = racers[0], s = HS;
+  const zone = SH - (bandTop + bandH) - safeB;
+  if(zone < 90 * s) return;
+  const h = clamp(zone * .34, 76 * s, 150 * s);
+  const w = Math.min(SW - 44 * s, 440 * s);
+  const cy = bandTop + bandH + zone * .46;
+  const ready = state === "race" && !me.air && me.lock <= 0 && !me.done;
+
+  ctx.save();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.globalAlpha = ready ? 1 : .62;
+  badgePanel((SW - w) / 2, cy - h / 2, w, h, 14 * s);
+  ctx.fillStyle = INK;
+  ctx.font = `bold ${Math.round(42*s)}px ${FONT}`;
+  ctx.fillText(me.done ? "SELESAI" : "KETUK!", SW / 2, cy);
+  ctx.restore();
+}
+
+function drawHud(){
+  if(state === "title" || state === "select" || state === "done") return;
+
+  ctx.save();
+  screenSpace();
+  if(letterboxed){ drawBandFrame(); drawTapPad(); }
+  drawDock();
+  ctx.restore();
+
+  // the overlays belong on the action, so they stay in band space
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+  const s = SS / 720;
+
+  ctx.textAlign = "center";
+  if(state === "countdown"){
+    const n = Math.ceil(countdown);
+    const t = 1 - (countdown - Math.floor(countdown));
+    ctx.save();
+    ctx.globalAlpha = clamp(1.4 - t, 0, 1);
+    ctx.font = `bold ${Math.round((150 + (1-t)*60)*s)}px ${FONT}`;
+    ctx.lineJoin = "round";
+    ctx.fillStyle = MERAH; ctx.strokeStyle = PUTIH; ctx.lineWidth = 14 * s;
+    const txt = n > 0 ? String(n) : "MULAI!";
+    ctx.strokeText(txt, W/2, H * .44); ctx.fillText(txt, W/2, H * .44);
+    ctx.restore();
+  } else if(state === "race" && clock < 1.6 && !letterboxed){
+    // letterboxed, the tap pad below the band already says this, permanently
+    ctx.save();
+    ctx.lineJoin = "round";
+    ctx.font = `bold ${Math.round(26*s)}px ${FONT}`;
+    ctx.fillStyle = MERAH; ctx.strokeStyle = PUTIH; ctx.lineWidth = 5 * s;
+    ctx.strokeText("KETUK! KETUK! KETUK!", W/2, H * .3);
+    ctx.fillText("KETUK! KETUK! KETUK!", W/2, H * .3);
+    ctx.restore();
+  }
+
+  if(banner){
+    ctx.save();
+    ctx.globalAlpha = clamp(banner.life * 2.4, 0, 1);   // hold, then fade fast
+    ctx.font = `bold ${Math.round(56*s)}px ${FONT}`;
+    ctx.lineJoin = "round";
+    ctx.fillStyle = KUNING_2; ctx.strokeStyle = MERAH_TUA; ctx.lineWidth = 9 * s;
+    ctx.strokeText(banner.text, W/2, H * .17); ctx.fillText(banner.text, W/2, H * .17);
+    ctx.restore();
+  }
+
+  if(flash > 0){
+    ctx.fillStyle = `rgba(255,255,255,${flash * .5})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+
+function render(){
+  ctx.save();
+  screenSpace();
+  ctx.clearRect(0, 0, SW, SH);       // clears the strips too, not just the band
+  ctx.restore();
+  // the menus stand on #backdrop, which is behind the canvas — drawing the race
+  // underneath them would only cost frames
+  if(state === "title" || state === "select") return;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();   // keep the scene in its band
+  drawSky(); drawHills(); drawBunting(); drawCrowd();
+  drawField(); drawStartLine(); drawFinish();
+  drawPuffs();
+  for(let lane = 3; lane >= 0; lane--){
+    const r = racers.find(o => o.lane === lane);
+    if(r) drawRacer(r);
+  }
+  drawForeground();
+  ctx.restore();
+
+  drawHud();
+}
+
+/* ---------------------------------------------------------------- the loop */
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min((now - last) / 1000, .05);
+  last = now;
+  resize();          // cheap, and self-cancels unless the viewport really changed
+  anim += dt;
+  step(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ------------------------------------------------------------------- flow */
+
+/* The picker slides rather than tiles: the chosen racer stands front-on in the
+   middle and the others peek in from either side. Drag, arrows, dots and the
+   arrow keys all end up in setPick(). `drag` is measured in slots, so a
+   half-swiped carousel is just pick + 0.5. */
+let slides = [], drag = 0, dragMoved = false;
+
+const SLOT = () => (slides[0] ? slides[0].offsetWidth : 120) * 1.16;   // px per slot
+
+function layoutPicker(){
+  const gap = SLOT();
+  slides.forEach((el, i) => {
+    const o = i - pick - drag, k = Math.min(Math.abs(o), 2);
+    el.style.transform = `translateX(calc(-50% + ${o * gap}px)) scale(${1 - k * .24})`;
+    el.style.opacity   = Math.abs(o) > 2.05 ? 0 : 1 - k * .42;
+    el.style.filter    = `brightness(${1 - k * .28})`;
+    el.style.zIndex    = 100 - Math.round(k * 40);
+    el.classList.toggle("on", i === pick && !drag);
+  });
+}
+
+function setPick(i, quiet){
+  i = clamp(Math.round(i), 0, CHARS.length - 1);
+  const changed = i !== pick;
+  pick = i;
+  if(changed && !quiet) beep(700, .07, "square", .05);
+
+  const np = $("nameplate");
+  $("pick-name").textContent = CHARS[pick].name;
+  $("pick-tag").textContent  = CHARS[pick].tag;
+  if(changed){ np.classList.remove("pop"); void np.offsetWidth; np.classList.add("pop"); }
+
+  [...$("dots").children].forEach((d, k) => d.classList.toggle("on", k === pick));
+  $("prev").classList.toggle("dim", pick === 0);
+  $("next").classList.toggle("dim", pick === CHARS.length - 1);
+  layoutPicker();
+  makeRacers();
+}
+
+function buildPicker(){
+  const track = $("track"), dots = $("dots");
+  track.innerHTML = ""; dots.innerHTML = "";
+  slides = CHARS.map((c, i) => {
+    const el = document.createElement("div");
+    el.className = "slide";
+    el.innerHTML = `<img src="sprites/${c.id}_hero.png" alt="${c.name}" draggable="false">`;
+    el.onclick = () => { if(!dragMoved) setPick(i); };   // tap a neighbour to bring it in
+    track.appendChild(el);
+
+    const d = document.createElement("button");
+    d.type = "button"; d.setAttribute("aria-label", c.name);
+    d.onclick = () => setPick(i);
+    dots.appendChild(d);
+    return el;
+  });
+  setPick(pick, true);
+}
+
+/* swipe / click-drag */
+(function(){
+  const box = $("carousel"), track = $("track");
+  let id = null, x0 = 0, gap = 1;
+
+  box.addEventListener("pointerdown", e => {
+    if(id !== null || e.target.closest(".arrow")) return;
+    id = e.pointerId; x0 = e.clientX; gap = SLOT();
+    drag = 0; dragMoved = false;
+    box.setPointerCapture(id);
+    track.classList.add("dragging");
+    box.classList.add("grabbing");
+  });
+
+  box.addEventListener("pointermove", e => {
+    if(e.pointerId !== id) return;
+    if(Math.abs(e.clientX - x0) > 6) dragMoved = true;
+    let d = (x0 - e.clientX) / gap;
+    // rubber band once you pull past either end of the line-up
+    d -= ((pick + d) - clamp(pick + d, 0, CHARS.length - 1)) * .62;
+    drag = d;
+    layoutPicker();
+  });
+
+  const release = e => {
+    if(id === null || e.pointerId !== id) return;
+    box.releasePointerCapture(id);
+    id = null;
+    track.classList.remove("dragging");
+    box.classList.remove("grabbing");
+    const steps = Math.abs(drag) < .28 ? 0 : Math.sign(drag) * Math.max(1, Math.round(Math.abs(drag)));
+    drag = 0;
+    setPick(pick + steps);
+  };
+  box.addEventListener("pointerup", release);
+  box.addEventListener("pointercancel", release);
+
+  $("prev").onclick = () => setPick(pick - 1);
+  $("next").onclick = () => setPick(pick + 1);
+  window.addEventListener("resize", layoutPicker);
+})();
+
+// the slides have no width until the layer is on screen, so lay out after show()
+function toSelect(){ state = "select"; makeRacers(); show("scr-select"); layoutPicker(); }
+
+function startRace(){
+  makeRacers();
+  state = "countdown"; countdown = 3.05; clock = 0;
+  show("scr-race");
+}
+
+function endRace(){
+  state = "done";
+  const key = r => r.done ? r.time : 1e6 - r.x;
+  const board = [...racers].sort((a,b) => key(a) - key(b));
+  const meIdx = board.findIndex(r => r.human);
+  $("verdict").textContent = ["JUARA 1! 🏆", "Juara 2 👏", "Juara 3 🙂", "Belum beruntung 😅"][meIdx];
+  $("board").innerHTML = board.map((r, i) =>
+    `<div class="rowline${r.human ? " me" : ""}">
+       <span class="pos">${i + 1}</span>
+       <img src="sprites/${CHARS[r.ci].id}_hero.png" alt="">
+       <span>${CHARS[r.ci].name}${r.human ? " (kamu)" : ""}</span>
+       <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
+     </div>`).join("");
+  meIdx === 0 ? sfxWin() : sfxLose();
+  show("scr-done");
+}
+
+$("btn-play").onclick   = () => { beep(660,.1,"square",.06); toSelect(); };
+$("btn-go").onclick     = () => { beep(660,.1,"square",.06); startRace(); };
+$("btn-again").onclick  = () => startRace();
+$("btn-change").onclick = () => toSelect();
+
+const zone = $("tapzone");
+zone.addEventListener("pointerdown", e => { e.preventDefault(); tap(); });
+window.addEventListener("keydown", e => {
+  if(e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter"){
+    e.preventDefault();
+    if(state === "title") toSelect();
+    else if(state === "select") startRace();
+    else if(state === "done") startRace();
+    else tap();
+  }
+  if(state === "select" && (e.code === "ArrowLeft" || e.code === "ArrowRight")){
+    setPick(pick + (e.code === "ArrowRight" ? 1 : -1));
+  }
+});
+
+/* ------------------------------------------------------------------ boot */
+
+CHARS.forEach(c => POSES.forEach(p => {
+  const im = new Image();
+  im.src = `sprites/${c.id}_${p}.png`;
+  img[c.id + "_" + p] = im;
+}));
+
+// canvas text silently falls back until the face is actually loaded, and
+// nothing else on the title screen forces the bold weight early enough
+if(document.fonts) document.fonts.load('700 40px "IBM Plex Sans"');
+
+buildPicker();
+makeRacers();
+resize();
+show("scr-title");
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
