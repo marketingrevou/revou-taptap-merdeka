@@ -211,10 +211,11 @@
   <section>
     <div class="head"><h2>Music layers</h2><span class="tag">same key, same tempo</span></div>
     <p class="note">
-      One musical idea in four stems rather than five separate tracks, so a state change adds or
-      drops a layer instead of cutting to a new cue. They start phase-locked and stay that way —
-      the drum loop is 3.0&nbsp;s and the melody 6.0&nbsp;s, so one divides the other exactly.
-      <b>Hook enters at combo ≥ 4</b>: the music thickens when you are doing it right.
+      Four stems rather than separate tracks, so a state change adds or drops a layer instead of
+      cutting to a new cue. They start phase-locked and stay that way — 12, 6 and 3 seconds all
+      divide each other. <b>The menus are music only</b>: the crowd arrives with the race, so the
+      kampung turning up is itself the cue that you are about to run. <b>Hook enters at
+      combo ≥ 4</b>, thickening the arrangement when you are doing it right.
     </p>
     <div class="panel">
       <div class="layers" id="layers"></div>
@@ -288,10 +289,10 @@ const CUES = [
 ];
 
 const STEMS = [
-  ["bed",   "Bed",   "angklung ostinato, no pulse", "title → picker",  "6.0 s · −24 dB"],
-  ["crowd", "Crowd", "the kampung, underneath",     "everywhere",      "6.0 s · −26 dB"],
-  ["pulse", "Pulse", "kendang on every quarter",    "the tap grid",    "3.0 s · −20 dB"],
-  ["hook",  "Hook",  "tanjidor brass",              "combo ≥ 4",       "6.0 s · −21 dB"],
+  ["bed",   "Menu tune", "suling + angklung march, no pulse", "title → picker", "12.0 s · −24 dB"],
+  ["crowd", "Crowd",     "the kampung, underneath",           "race only",      "6.0 s · −26 dB"],
+  ["pulse", "Pulse",     "kendang on every quarter",          "the tap grid",   "3.0 s · −20 dB"],
+  ["hook",  "Hook",      "tanjidor brass",                    "combo ≥ 4",      "6.0 s · −21 dB"],
 ];
 
 const PRESETS = [
@@ -528,7 +529,7 @@ function buildLayers(){
     el.onclick = () => layer(el.dataset.id, !playing.has(el.dataset.id));
 
   const SET = [
-    ["Title / picker", ["bed", "crowd"]],
+    ["Title / picker", ["bed"]],
     ["Race", ["pulse", "crowd"]],
     ["Race + combo", ["pulse", "hook", "crowd"]],
     ["Silence", []],

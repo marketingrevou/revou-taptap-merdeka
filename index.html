@@ -1287,11 +1287,13 @@ function ride(id, on, tau){
   st.gain.gain.setTargetAtTime(on ? 1 : 0, actx.currentTime, tau);
 }
 
-// one musical idea; a screen change adds or drops a layer rather than cutting
+/* One musical idea; a screen change adds or drops a layer rather than cutting.
+   The menus are music only — the crowd arrives with the race, so the kampung
+   turning up is itself the cue that the race is about to start. */
 const SCREEN_MIX = {
-  "scr-title":  ["bed", "crowd"],
-  "scr-email":  ["bed", "crowd"],
-  "scr-select": ["bed", "crowd"],
+  "scr-title":  ["bed"],
+  "scr-email":  ["bed"],
+  "scr-select": ["bed"],
   "scr-race":   ["pulse", "crowd"],
   "scr-done":   [],
 };

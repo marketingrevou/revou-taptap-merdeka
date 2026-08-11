@@ -501,20 +501,61 @@ def stem_hook():
     return out
 
 
-def stem_bed():
-    """Layer A. Title through picker: warm, waiting, and deliberately without a
-    pulse -- there is nothing to tap to yet.
+# The menu tune: an 8-bar march phrase, eighth-note slots, None = hold or rest.
+#
+# This is an ORIGINAL melody in the 17 Agustus march idiom -- the rising-fourth
+# opening, the dotted march tread, the climb to the fifth and the walk back down.
+# It is deliberately not "Hari Merdeka": that song is H. Mutahar, 1946, and the
+# author died in 2004, so under UU 28/2014 it is in copyright until roughly 2074.
+# A paid-traffic campaign using it commercially needs a WAMI/LMKN licence.
+#
+# If that licence is cleared, swapping the real tune in is this table and the bass
+# line under it -- nothing else in the file has to change.
+BED_RIFF = [
+    ["A4",  None, "A4",  None, "D5",  None, None, None],
+    ["D5",  None, "E5",  None, "F#5", None, "E5", None],
+    ["D5",  None, None,  None, "A4",  None, "B4", None],
+    ["A4",  None, None,  None, None,  None, None, None],
+    ["B4",  None, "B4",  None, "D5",  None, "B4", None],
+    ["A4",  None, "G4",  None, "F#4", None, None, None],
+    ["E4",  None, "F#4", None, "G4",  None, "E4", None],
+    ["D4",  None, None,  None, None,  None, None, None],
+]
+BED_BASS = ["D3", "D3", "A3", "A3", "G3", "D3", "A3", "D3"]
+BED_BARS = len(BED_RIFF)
+BED_LOOP = BED_BARS * BAR          # 12.0 s -- and 12 divides both 6 and 3
 
-    Tonal only. The crowd wash used to live in here too, which meant shipping the
-    same noise twice -- once inside this stem and once as `crowd` for the race.
-    The engine layers the two instead, and a purely tonal stem is also far cheaper
-    for a VBR encoder than one with a noise floor smeared across it."""
-    out = np.zeros(n(LOOP))
-    for bar, notes in enumerate([("D4", "A4"), ("F#4", "A4"), ("E4", "B4"), ("F#4", "A4")]):
-        for beat, note in zip((0, 2), notes):
-            place(out, angklung(note, BEAT * 2.4), bar * BAR + beat * BEAT, 0.34)
-    place(out, angklung("D3", BAR), 0, 0.20)
-    place(out, angklung("A3", BAR), 2 * BAR, 0.18)
+
+def stem_bed():
+    """Layer A, title through picker: the tune, and the only music on the menus.
+
+    Eight bars rather than four because this is a melody the player will hear for
+    twenty-odd seconds while they read and type, and a four-bar phrase on a loop
+    that short starts to nag. Nothing else plays underneath it now, so its length
+    is unconstrained -- though 12 s still divides 6 and 3, which keeps the option
+    of layering it open.
+
+    Scored for suling and angklung with the brass well back, and with NO kendang on
+    the quarters. That last part is deliberate: the race's kendang is the tap cue,
+    and putting a competing pulse on the menus would teach a rhythm to a player who
+    has nothing to tap yet."""
+    out = np.zeros(n(BED_LOOP))
+    E = BEAT / 2
+    for bar, line in enumerate(BED_RIFF):
+        for i, note in enumerate(line):
+            if note is None:
+                continue
+            nxt = next((j for j in range(i + 1, 8) if line[j] is not None), 8)
+            dur = min((nxt - i) * E, E * 4.5)
+            at = bar * BAR + i * E
+            place(out, suling(note, dur * 1.05), at, 0.50)
+            place(out, angklung(note, min(dur * 1.6, BEAT * 2)), at, 0.22)
+            # no brass here: at the 0.10 gain it wanted it was inaudible under the
+            # suling, but its harmonics still cost the VBR encoder real bytes
+        # tuba on 1 and 3 gives the march tread without a tappable pulse
+        for beat in (0, 2):
+            place(out, tuba(BED_BASS[bar], BEAT * 0.75), bar * BAR + beat * BEAT, 0.26)
+        place(out, kentongan(0.08, 1150), bar * BAR, 0.10)    # one soft tick a bar
     return out
 
 
@@ -609,7 +650,7 @@ def main():
     # padding, so a stem decodes 7-14 ms long. Setting loopEnd from
     # buffer.duration therefore drifts the tap grid every loop -- ~85 ms over a
     # race. These come from the tempo instead, which is exact by construction.
-    loops = {"pulse": PULSE_BARS * BAR, "bed": LOOP, "crowd": LOOP, "hook": LOOP}
+    loops = {"pulse": PULSE_BARS * BAR, "bed": BED_LOOP, "crowd": LOOP, "hook": LOOP}
 
     meta = os.path.join(OUT, os.pardir, "sfx.json")
     with open(meta, "w") as f:
