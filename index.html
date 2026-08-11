@@ -41,18 +41,34 @@
   /* the ad's backdrop. It sits *behind* the canvas and is always on: it backs the
      menus (where render() skips the scene entirely) and it fills the letterbox
      strips above and below the race band on tall screens. */
+  /* the plate is 3:2. Landscape crops a little sky off the top and dirt off the
+     bottom; portrait matches on height, so the full sky-to-ground run survives
+     and only the sides are lost — which is why it is centred rather than pinned.
+
+     bg.jpg is the shipping encode of images/bg.png (q82, 4:2:0, progressive):
+     275 KB against 2.4 MB. The plate has no transparency, so a JPEG needs none of
+     the image-set()/type() machinery a WebP would to stay safe in older Safari.
+     Re-export bg.png and this wants re-encoding with it. */
   #backdrop{position:absolute;inset:0;
-            background:url("assets/bg-festival.jpg") center bottom/cover no-repeat,
-                       radial-gradient(ellipse 88.5% 96.9% at 50% 50%,
-                         var(--bg-dalam) 0%,var(--bg-tengah) 50%,var(--bg-luar) 100%)}
+            background:url("images/bg.jpg") 50% 50%/cover no-repeat,
+                       linear-gradient(180deg,#1f74cf 0%,#7fb6e6 44%,#c9a066 100%)}
+  /* the drawn race scene owns the band, so the letterbox strips step back */
+  #stage.racing #backdrop{filter:brightness(.6) saturate(.85)}
   /* measured in JS: env() will not resolve through getComputedStyle on a custom
      property, but it does resolve on a real declaration */
   #safe{position:absolute;top:0;left:0;width:0;height:0;pointer-events:none;visibility:hidden;
         padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 
-  .layer{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
-         padding:clamp(12px,3vmin,32px);text-align:center;gap:clamp(10px,2.2vmin,22px)}
+  /* Scrolls rather than clips. A results card with four rows plus the prize can
+     outgrow a short phone, and centred flex content overflows out of reach at
+     BOTH ends — the auto margins centre it while it fits and release it when it
+     does not, so the prize line can never be cropped off the bottom. */
+  .layer{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;
+         padding:clamp(12px,3vmin,32px);text-align:center;gap:clamp(10px,2.2vmin,22px);
+         overflow-y:auto;overscroll-behavior:contain}
   .layer.on{display:flex}
+  .layer > :first-child{margin-top:auto}
+  .layer > :last-child{margin-bottom:auto}
   .layer.pass{pointer-events:none}
   .layer.pass > *{pointer-events:auto}
 
@@ -76,50 +92,182 @@
 
   h2{font-size:clamp(20px,4.4vmin,44px)}
 
-  /* ---- ad lockup: the title screen, rebuilt from the Figma frame ---------- */
-  /* --w is the wordmark width; every other size in the lockup is a ratio of it,
-     exactly as the 744px-wide lockup relates to the rest of the 1920x900 frame */
+  /* ---- title screen ------------------------------------------------------- */
+  /* --w is the *visible* width of the title art, and every size in the lockup is
+     a ratio of it, so the whole composition scales as one unit instead of each
+     part clamping alone.
+     62vh is not arbitrary. The hero is bottom-anchored and the copy column is
+     vertically centred, so the two only sit at the same height — the balance the
+     mock has — at one ratio of --w to the viewport, and that ratio works out to
+     .62. Change the hero width or the column's gaps and this wants re-deriving. */
   #scr-title{padding:0;gap:0;overflow:hidden}
-  /* the wordmark is the widest thing in the lockup; the badge under it runs about
-     .9x --w, since "Rp5,000,000!" sets its own width rather than the artwork's */
-  .ad{--w:min(46vw,88vh,744px);
-      --badge-b:max(5px,calc(var(--w) * .0134));
-      --badge-s:max(5px,calc(var(--w) * .0121));
-      display:flex;align-items:center;justify-content:center;gap:calc(var(--w) * .06);
-      width:100%;height:100%;padding:0 clamp(10px,2.5vw,56px)}
-  .ad-copy{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:calc(var(--w) * .035)}
-  /* 637 wide against the 744 lockup, and hanging 120px past the frame's
-     bottom edge — that overhang is what keeps it from being clipped at the top */
-  .ad-hero{flex:0 0 auto;width:calc(var(--w) * .856);align-self:flex-end;
-           margin-bottom:calc(var(--w) * -.16);
-           transform:rotate(2.65deg);transform-origin:50% 100%;
-           filter:drop-shadow(0 .04em .5em rgba(90,10,14,.35))}
+  .title-wrap{--w:min(45vw,62vh,680px);
+              display:flex;align-items:center;justify-content:center;
+              gap:calc(var(--w) * .04);width:100%;height:100%;
+              padding:0 clamp(10px,2.5vw,56px)}
+  .title-copy{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;
+              gap:calc(var(--w) * .04)}
+  /* the hero is bust-length at 450x700; .86x --w lands its head on the top of the
+     title art once the overhang below is discounted */
+  /* height:auto is load-bearing — the img carries width/height attributes so the
+     layout is stable before it decodes, and without it the 700px attribute wins
+     over the scaled width and the character stretches */
+  .title-hero{flex:0 0 auto;width:calc(var(--w) * .86);height:auto;align-self:flex-end;
+              margin-bottom:calc(var(--w) * -.12);
+              filter:drop-shadow(0 .02em .45em rgba(46,24,10,.45));
+              animation:bob 3.6s ease-in-out infinite}
 
-  /* two SVGs, overlapped at the ratios they sit at inside the 744x382 lockup */
-  .wordmark{position:relative;width:var(--w);aspect-ratio:744.151/381.83}
-  .wordmark img{position:absolute;display:block}
-  .wm-taptap{left:7.13%;top:0;width:81.41%}
-  .wm-merdeka{left:0;top:43.66%;width:100%}
+  /* The title art is a 1536x1024 plate whose glyphs only occupy the box
+     (43,114)-(1524,903) — 2.8% of the width is empty on the left and 11% of the
+     height at top and bottom. Laid out raw that padding would push the ribbon a
+     visible distance below the letters, so the element is sized to the plate and
+     the dead bands are pulled back out with negative margins. Re-measure these
+     four numbers if the art is ever re-exported.
+       element width  = --w / .9642  = --w * 1.0371
+       element height = width / 1.5  = --w * .6914
+       top / bottom   = 11.04% / 11.82% of that height
+     title.webp and title.png share those dimensions exactly, so the geometry holds
+     whichever one the browser picks. */
+  .wordmark{width:calc(var(--w) * 1.0371);aspect-ratio:1536/1024;
+            margin:calc(var(--w) * -.0763) 0 calc(var(--w) * -.0817);
+            filter:drop-shadow(0 calc(var(--w) * .004) calc(var(--w) * .012) rgba(30,10,12,.35))}
+  .wordmark picture{display:block}
+  .wordmark img{display:block;width:100%;height:auto}
 
-  .promo-card{display:flex;flex-direction:column;align-items:center;
-              gap:calc(var(--w) * .0121);padding:calc(var(--w) * .0403) calc(var(--w) * .0417)}
-  .promo-title{display:block;width:calc(var(--w) * .667)}
-  .promo-line{display:flex;align-items:center;justify-content:center;gap:calc(var(--w) * .0148);
-              color:var(--ink);font-weight:700;line-height:1.1;white-space:nowrap}
-  .promo-line span{font-size:calc(var(--w) * .035)}
-  .promo-line b{font-size:calc(var(--w) * .078)}
+  /* the objective banner. clip-path notches both ends into a ribbon, so the depth
+     is a filter rather than a box-shadow: filters apply after the clip and follow
+     the notched silhouette, where a box-shadow would trace the unclipped box.
+     Sizes are in em off a --w-derived font-size, so the notch scales with it.
 
-  .cta{display:flex;flex-direction:column;align-items:center;gap:calc(var(--w) * .022);
-       margin-top:calc(var(--w) * .012)}
-  /* the CTA is not in the frame, so it is sized off --w to carry the same
-     weight as the badge above it rather than clamping on its own */
-  .cta .btn{font-size:calc(var(--w) * .042);padding:calc(var(--w) * .026) calc(var(--w) * .062)}
+     Width and font-size are a matched pair, not two free numbers. The copy is
+     26.3em set on one line and breaks best as 13.7em + 11.9em, and the stars plus
+     padding cost 6.9em of the box, so two lines need width/font-size >= 20.6. At
+     .80 / .034 the ratio is 23.5 — enough headroom that a fallback face with wider
+     metrics still breaks in two. Change one number and the copy reflows to three. */
+  .ribbon{font-size:calc(var(--w) * .034);
+          display:flex;align-items:center;justify-content:space-between;gap:.75em;
+          width:calc(var(--w) * .80);padding:.5em 1.5em;
+          transform:rotate(-1.6deg);
+          background:linear-gradient(180deg,#a8171d 0%,#780e13 100%);
+          clip-path:polygon(0 0,100% 0,calc(100% - .8em) 50%,100% 100%,0 100%,.8em 50%);
+          box-shadow:inset 0 .1em 0 rgba(255,255,255,.18);
+          filter:drop-shadow(0 .1em 0 #4d080b) drop-shadow(0 .2em .3em rgba(34,6,8,.45))}
+  /* flex:1 hands the span every pixel the stars do not need, which is what puts
+     the stars out at the ends the way the mock has them */
+  .ribbon span{flex:1;color:var(--putih);font-weight:700;text-transform:uppercase;
+               line-height:1.14;letter-spacing:.02em;text-align:center;
+               text-shadow:0 .07em 0 rgba(52,6,8,.5)}
+  .ribbon i{flex:0 0 auto;font-style:normal;font-size:1.15em;line-height:1;
+            color:var(--kuning-2);text-shadow:0 .06em 0 rgba(92,52,6,.6)}
 
-  /* portrait and small landscape: one centred column, hero art dropped so the
-     copy is never squeezed against it */
-  @media (max-width:900px),(max-height:520px){
-    .ad{--w:min(88vw,62vh);gap:0}
-    .ad-hero{display:none}
+  /* the pulse lives on the wrapper: the button's own transform is spoken for by
+     :active, and the two would overwrite each other on the same property */
+  .cta{display:flex;justify-content:center;animation:breathe 2.6s ease-in-out infinite}
+  .pill{font:inherit;font-size:calc(var(--w) * .066);font-weight:700;cursor:pointer;
+        text-transform:uppercase;letter-spacing:.07em;color:var(--putih);
+        padding:.44em 1.5em;border-radius:999px;border:max(3px,.085em) solid var(--putih);
+        background:linear-gradient(180deg,#f0353c 0%,#d8191f 54%,#af131a 100%);
+        box-shadow:0 .16em 0 #8b1216,0 .3em .45em rgba(46,7,9,.45),
+                   inset 0 .16em .02em rgba(255,255,255,.34),
+                   inset 0 -.14em .02em rgba(0,0,0,.16);
+        transition:transform .09s,box-shadow .09s}
+  .pill:active{transform:translateY(.16em);
+               box-shadow:0 0 0 #8b1216,0 .1em .2em rgba(46,7,9,.4),
+                          inset 0 .16em .02em rgba(255,255,255,.22)}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+
+  /* ---- game chrome: round icon buttons, prize chip ------------------------ */
+  #hud-top{position:absolute;z-index:420;display:flex;align-items:flex-start;
+           gap:clamp(10px,1.5vw,20px);
+           top:calc(clamp(12px,2.6vh,34px) + env(safe-area-inset-top,0px));
+           right:clamp(14px,2.8vw,52px)}
+  .sub-nav{display:none;gap:clamp(14px,3vw,22px)}
+  /* SVG rather than emoji: an emoji is a colour glyph, so `color` would not
+     reach it and each platform would draw a different weight on the disc */
+  .gbtn{display:flex;flex-direction:column;align-items:center;gap:.45em;
+        background:none;border:0;padding:0;cursor:pointer;font:inherit;color:var(--putih)}
+  .gbtn i{display:grid;place-items:center;width:clamp(40px,4.2vw,78px);aspect-ratio:1;
+          border-radius:999px;border:3px solid var(--putih);
+          background:linear-gradient(180deg,#4b2c26 0%,#2a1412 100%);
+          box-shadow:0 .12em 0 rgba(18,6,6,.6),0 .22em .5em rgba(24,6,8,.42),
+                     inset 0 .12em 0 rgba(255,255,255,.18);
+          transition:transform .09s}
+  .gbtn.hot i{background:linear-gradient(180deg,#f0353c 0%,#bf151b 100%);
+              box-shadow:0 .12em 0 #8b1216,0 .22em .5em rgba(24,6,8,.42),
+                         inset 0 .12em 0 rgba(255,255,255,.26)}
+  .gbtn:active i{transform:translateY(.1em)}
+  .gbtn svg{width:54%;height:54%;stroke:var(--putih);fill:none;stroke-width:2;
+            stroke-linecap:round;stroke-linejoin:round}
+  /* white caption over a bright sky needs the shadow to stay readable */
+  .gbtn b{font-size:clamp(9px,.72vw,14px);font-weight:700;letter-spacing:.08em;
+          text-transform:uppercase;text-shadow:0 2px 3px rgba(20,6,8,.85)}
+
+  /* one font-size drives the whole chip, so the tile, the copy and the chevron
+     scale together instead of each clamping against the viewport on its own */
+  #prize-chip{position:absolute;z-index:420;display:flex;align-items:center;gap:.7em;
+              left:clamp(12px,2.6vw,44px);
+              bottom:calc(clamp(12px,3vh,40px) + env(safe-area-inset-bottom,0px));
+              cursor:pointer;font:inherit;font-size:clamp(12px,1vw,19px);
+              text-align:left;color:var(--putih);border:0;
+              padding:.55em .7em;border-radius:.85em;
+              background:rgba(38,14,12,.66);
+              box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22),
+                         0 .4em .9em rgba(20,6,8,.45);
+              -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  #prize-chip .gift{display:grid;place-items:center;flex:0 0 auto;
+                    width:2.3em;height:2.3em;border-radius:.45em;
+                    background:linear-gradient(180deg,#f0353c,#bf151b);
+                    box-shadow:0 2px 0 #8b1216}
+  #prize-chip .gift svg{width:64%;height:64%;stroke:var(--putih);fill:none;stroke-width:2;
+                        stroke-linecap:round;stroke-linejoin:round}
+  #prize-chip .t{display:block;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+                 line-height:1.15}
+  #prize-chip .a{display:block;margin-top:.15em;font-weight:600;font-size:.9em;
+                 line-height:1.15;color:rgba(255,255,255,.78)}
+  #prize-chip .a b{color:var(--kuning-2);font-size:1.2em}
+  #prize-chip .chev{display:none;flex:0 0 auto;margin-left:auto;padding-left:.5em}
+  #prize-chip .chev svg{display:block;width:1.4em;height:1.4em;
+                        stroke:rgba(255,255,255,.75);fill:none;stroke-width:2.4;
+                        stroke-linecap:round;stroke-linejoin:round}
+
+  /* portrait: the mock's phone layout — wordmark, ribbon, character, CTA riding
+     up over the sack, then the two side buttons, prize bar across the bottom.
+     display:contents flattens .title-copy so the hero can be ordered between its
+     children; the hero then flex-shrinks, which is what guarantees no overflow
+     on a short phone regardless of how the rest of the column measures out. */
+  @media (max-width:900px) and (min-height:561px){
+    .title-wrap{--w:min(84vw,38vh);flex-direction:column;justify-content:center;
+                gap:calc(var(--w) * .03);
+                padding:calc(var(--w) * .26) clamp(10px,3.5vw,20px) calc(var(--w) * .34)}
+    .title-copy{display:contents}
+    .wordmark{order:1}
+    /* .96/.042 keeps the same width-to-font-size ratio the desktop rule derives */
+    .ribbon{order:2;width:calc(var(--w) * .96);font-size:calc(var(--w) * .042)}
+    /* driven by height, not width: vertical room is what is scarce in a phone
+       column, and object-fit:contain catches the case where even this has to
+       shrink so the character scales instead of stretching */
+    .title-hero{order:3;height:calc(var(--w) * 1.02);width:auto;max-width:100%;
+                align-self:center;margin:0;
+                flex:0 1 auto;min-height:0;object-fit:contain;object-position:50% 100%;
+                animation-duration:4.2s}
+    .cta{order:4;z-index:2;margin-top:calc(var(--w) * -.12)}
+    .pill{font-size:calc(var(--w) * .085);padding:.42em 1.4em}
+    /* the captions are wider than the discs, so the row is spaced off those */
+    .sub-nav{order:5;display:flex;gap:clamp(22px,7vw,34px)}
+    #hud-top{top:calc(clamp(8px,1.8vh,16px) + env(safe-area-inset-top,0px));
+             right:clamp(10px,3.5vw,18px)}
+    #hud-top .gbtn[data-nav="ranking"],#hud-top .gbtn[data-nav="settings"]{display:none}
+    #prize-chip{left:clamp(10px,3.5vw,18px);right:clamp(10px,3.5vw,18px);
+                bottom:calc(clamp(10px,1.8vh,18px) + env(safe-area-inset-bottom,0px));
+                font-size:clamp(13px,3.6vw,17px);padding:.6em .7em}
+    #prize-chip .chev{display:grid}
+  }
+
+  /* short landscape — a phone on its side, or a squat desktop window. The row
+     layout still reads best here; it only needs to shrink. */
+  @media (max-height:560px){
+    .title-wrap{--w:min(34vw,68vh)}
+    .ribbon{width:calc(var(--w) * .94);font-size:calc(var(--w) * .04)}
   }
 
   /* ---------------------------------------------------------------- buttons */
@@ -136,12 +284,57 @@
   .btn.ghost{background:var(--putih);color:var(--merah);box-shadow:0 var(--badge-s) 0 #b99a6a}
   .btn.ghost:active{box-shadow:0 0 0 #b99a6a}
   .row{display:flex;gap:clamp(8px,1.8vmin,16px);flex-wrap:wrap;justify-content:center}
+  /* the UA ring is near-invisible on the red fills, and the title screen is now
+     mostly buttons — give keyboard focus something that reads on every surface */
+  .btn:focus-visible,.pill:focus-visible,.arrow:focus-visible,
+  #prize-chip:focus-visible,#mute:focus-visible{outline:3px solid var(--kuning-2);outline-offset:3px}
+  .gbtn:focus-visible{outline:0}
+  .gbtn:focus-visible i{outline:3px solid var(--kuning-2);outline-offset:3px}
+
+  /* ------------------------------------------------- hadiah / ranking / setelan */
+  /* not routed through show(): these sit *over* whichever screen is up, so the
+     title art stays behind them instead of being swapped out */
+  #scr-modal{z-index:500;background:rgba(30,8,10,.7);
+             -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+  .modal-card{width:min(92vw,440px);max-height:86vh;overflow-y:auto;
+              padding:clamp(18px,3.4vmin,30px);border-radius:12px;
+              display:flex;flex-direction:column;gap:clamp(10px,2vmin,16px)}
+  .modal-card h2{font-size:clamp(19px,3.6vmin,30px);color:var(--merah);text-transform:uppercase;
+                 text-align:center;line-height:1.05;text-shadow:0 .06em 0 rgba(104,80,32,.25)}
+  /* the card's own gap only separates heading / body / button; the body's blocks
+     need their own, or the footnote reads as part of the last step */
+  #modal-body{display:flex;flex-direction:column;gap:clamp(9px,1.8vmin,15px)}
+  .modal-card .lead{font-weight:600;text-align:center;font-size:clamp(13px,2.2vmin,17px)}
+  .modal-card .lead b{color:var(--merah)}
+  .modal-card .fine{font-weight:600;text-align:center;color:#7a5a2c;
+                    font-size:clamp(11px,1.8vmin,14px)}
+  .steps{display:flex;flex-direction:column;gap:.55em;text-align:left;
+         font-size:clamp(12px,2vmin,16px);font-weight:600;counter-reset:s}
+  .steps li{list-style:none;display:flex;gap:.6em;align-items:baseline}
+  .steps li::before{counter-increment:s;content:counter(s);flex:0 0 auto;
+                    display:grid;place-items:center;width:1.7em;height:1.7em;border-radius:999px;
+                    background:var(--merah);color:var(--putih);font-size:.82em}
+  .ranklist{display:flex;flex-direction:column;gap:.35em;counter-reset:r}
+  .ranklist li{list-style:none;display:flex;align-items:center;gap:.7em;
+               padding:.45em .7em;border-radius:7px;background:rgba(255,255,255,.55);
+               font-weight:600;font-size:clamp(12px,2.1vmin,17px)}
+  .ranklist li::before{counter-increment:r;content:counter(r);flex:0 0 auto;width:1.6em;
+                       text-align:center;font-weight:700;color:var(--merah)}
+  .ranklist li span{flex:1}
+  /* white row, red control: the default gold .btn on the card's own gold gradient
+     had almost no edge to it */
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:1em;
+          padding:.5em .5em .5em .9em;border-radius:9px;background:var(--putih);
+          font-weight:700;font-size:clamp(13px,2.2vmin,17px)}
+  .switch .btn{padding:.45em 1.1em;font-size:.9em;--badge-b:3px;--badge-s:3px;min-width:5.5em}
 
   /* ---------------------------------------------------- email / lead capture */
   .email-card{width:min(92vw,520px);padding:clamp(18px,3.4vmin,32px);border-radius:10px;
               display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.6vmin,14px)}
   /* not .display: the white outline is there to lift text off the busy photo
      backdrop, and on the gold card it just muddies the letterforms */
+  .email-card p.email-sub{color:var(--ink);font-weight:600;margin-bottom:.15em;
+                          font-size:clamp(13px,2.2vmin,18px)}
   .email-card h2{font-size:clamp(20px,4vmin,36px);color:var(--merah);text-transform:uppercase;
                  line-height:1.05;text-shadow:0 .06em 0 rgba(104,80,32,.25)}
   #email-form{display:flex;flex-direction:column;gap:clamp(8px,1.6vmin,14px);width:100%;align-items:stretch}
@@ -227,13 +420,26 @@
   #stage.racing #brandmark{display:none}
   /* red disc with a white keyline — the same pill language as the drawn HUD */
   #mute{position:absolute;top:clamp(8px,1.6vmin,16px);right:clamp(8px,1.6vmin,16px);z-index:400;cursor:pointer;
+        display:grid;place-items:center;padding:0;
         background:#c9171e;color:var(--putih);border:3px solid var(--putih);border-radius:999px;
         width:clamp(34px,5vmin,46px);height:clamp(34px,5vmin,46px);
-        font-size:clamp(15px,2.4vmin,21px);line-height:1;box-shadow:0 3px 0 rgba(112,10,14,.55)}
+        box-shadow:0 3px 0 rgba(112,10,14,.55)}
+  #mute svg{width:56%;height:56%;stroke:currentColor;fill:none;stroke-width:2;
+            stroke-linecap:round;stroke-linejoin:round}
   #stage.racing #mute{box-shadow:0 3px 0 rgba(112,10,14,.75)}
+  /* the title screen carries sound inside Pengaturan, so the floating disc there
+     would just be a second control for the same thing */
+  #stage.titling #mute{display:none}
   /* no "please rotate your phone" nag: portrait letterboxes the race instead */
   .fade{animation:fade .35s ease both}
   @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* the race itself is canvas-driven and unaffected; this only stills the idle
+     decoration — the hero's bob, the CTA pulse, the picker bob */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+                         transition-duration:.001ms!important}
+  }
 </style>
 </head>
 <body>
@@ -245,27 +451,65 @@
   <canvas id="game"></canvas>
 
   <div class="layer on" id="scr-title">
-    <div class="ad">
-      <div class="ad-copy">
-        <div class="wordmark">
-          <img class="wm-taptap" src="assets/wordmark-taptap.svg" alt="">
-          <img class="wm-merdeka" src="assets/wordmark-merdeka.svg" alt="Tap Tap Merdeka">
-        </div>
-        <div class="badge promo-card">
-          <img class="promo-title" src="assets/diskon-program.svg" alt="Diskon Program">
-          <p class="promo-line"><span>sampai dengan</span><b>Rp5,000,000!</b></p>
-        </div>
-        <div class="cta">
-          <button class="btn merah" id="btn-play">Mulai</button>
+    <div class="title-wrap">
+      <div class="title-copy">
+        <!-- 178 KB WebP against a 1.6 MB PNG. The art is a wide flat gradient, so
+             a 256-colour palette PNG is not an option — it bands visibly across the
+             letter faces where WebP stays smooth. The PNG stays as the fallback and
+             as the source art; a WebP-capable browser never fetches it. -->
+        <h1 class="wordmark">
+          <picture>
+            <source srcset="images/title.webp" type="image/webp">
+            <img src="images/title.png" width="1536" height="1024" alt="Tap Tap Merdeka">
+          </picture>
+        </h1>
+        <p class="ribbon"><i>★</i><span>Tap secepat mungkin dan raih skor tertinggi!</span><i>★</i></p>
+        <div class="cta"><button class="pill" id="btn-play">Mulai</button></div>
+        <!-- ranking and pengaturan ride in the top row on desktop and down here on
+             a phone; only one copy of each is ever displayed, and the click handler
+             is delegated off data-nav so neither needs its own binding -->
+        <div class="sub-nav">
+          <button class="gbtn" data-nav="ranking" aria-label="Ranking">
+            <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h2.5a1.5 1.5 0 0 1 0 5H17M7 5H4.5a1.5 1.5 0 0 0 0 5H7"/></svg></i>
+            <b>Ranking</b>
+          </button>
+          <button class="gbtn" data-nav="settings" aria-label="Pengaturan">
+            <i><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.2a1.5 1.5 0 0 1 1.5 1.5v.6a1.5 1.5 0 0 0 2.2 1.1l.5-.3a1.5 1.5 0 0 1 2 .6l.4.7a1.5 1.5 0 0 1-.5 2l-.5.3a1.5 1.5 0 0 0 0 2.6l.5.3a1.5 1.5 0 0 1 .5 2l-.4.7a1.5 1.5 0 0 1-2 .6l-.5-.3a1.5 1.5 0 0 0-2.2 1.1v.6a1.5 1.5 0 0 1-1.5 1.5h-.8a1.5 1.5 0 0 1-1.5-1.5v-.6a1.5 1.5 0 0 0-2.2-1.1l-.5.3a1.5 1.5 0 0 1-2-.6l-.4-.7a1.5 1.5 0 0 1 .5-2l.5-.3a1.5 1.5 0 0 0 0-2.6l-.5-.3a1.5 1.5 0 0 1-.5-2l.4-.7a1.5 1.5 0 0 1 2-.6l.5.3a1.5 1.5 0 0 0 2.2-1.1v-.6A1.5 1.5 0 0 1 11.2 2.2z"/></svg></i>
+            <b>Pengaturan</b>
+          </button>
         </div>
       </div>
-      <img class="ad-hero" src="sprites/adik_hero.png" alt="">
+      <img class="title-hero" src="sprites/adik_hero.png" width="450" height="700" alt="">
     </div>
+
+    <div id="hud-top">
+      <button class="gbtn hot" data-nav="hadiah" aria-label="Hadiah">
+        <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8"/><rect x="2.4" y="7" width="19.2" height="5" rx="1"/><path d="M12 7v14M12 7S9.6 7 8.2 5.6 8.7 2.2 10.1 2.8 12 7 12 7zM12 7s2.4 0 3.8-1.4S15.3 2.2 13.9 2.8 12 7 12 7z"/></svg></i>
+        <b>Hadiah</b>
+      </button>
+      <button class="gbtn" data-nav="ranking" aria-label="Ranking">
+        <i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h2.5a1.5 1.5 0 0 1 0 5H17M7 5H4.5a1.5 1.5 0 0 0 0 5H7"/></svg></i>
+        <b>Ranking</b>
+      </button>
+      <button class="gbtn" data-nav="settings" aria-label="Pengaturan">
+        <i><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.2a1.5 1.5 0 0 1 1.5 1.5v.6a1.5 1.5 0 0 0 2.2 1.1l.5-.3a1.5 1.5 0 0 1 2 .6l.4.7a1.5 1.5 0 0 1-.5 2l-.5.3a1.5 1.5 0 0 0 0 2.6l.5.3a1.5 1.5 0 0 1 .5 2l-.4.7a1.5 1.5 0 0 1-2 .6l-.5-.3a1.5 1.5 0 0 0-2.2 1.1v.6a1.5 1.5 0 0 1-1.5 1.5h-.8a1.5 1.5 0 0 1-1.5-1.5v-.6a1.5 1.5 0 0 0-2.2-1.1l-.5.3a1.5 1.5 0 0 1-2-.6l-.4-.7a1.5 1.5 0 0 1 .5-2l.5-.3a1.5 1.5 0 0 0 0-2.6l-.5-.3a1.5 1.5 0 0 1-.5-2l.4-.7a1.5 1.5 0 0 1 2-.6l.5.3a1.5 1.5 0 0 0 2.2-1.1v-.6A1.5 1.5 0 0 1 11.2 2.2z"/></svg></i>
+        <b>Pengaturan</b>
+      </button>
+    </div>
+
+    <button id="prize-chip" data-nav="hadiah">
+      <span class="gift"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8"/><rect x="2.4" y="7" width="19.2" height="5" rx="1"/><path d="M12 7v14M12 7S9.6 7 8.2 5.6 8.7 2.2 10.1 2.8 12 7 12 7zM12 7s2.4 0 3.8-1.4S15.3 2.2 13.9 2.8 12 7 12 7z"/></svg></span>
+      <span>
+        <span class="t">Hadiah Merdeka</span>
+        <span class="a">hingga <b id="diskon-max">Rp5.000.000!</b></span>
+      </span>
+      <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span>
+    </button>
   </div>
 
   <div class="layer" id="scr-email">
     <div class="badge email-card">
-      <h2>Kunci Hadiahmu</h2>
+      <p class="email-sub">Masukkan email untuk menyimpan data</p>
       <form id="email-form" novalidate>
         <input id="email-input" type="email" inputmode="email" autocomplete="email"
                spellcheck="false" placeholder="nama@email.com" aria-label="Alamat email" required>
@@ -298,13 +542,22 @@
       <div id="prize"><span>Hadiahmu</span><b id="prize-text"></b></div>
     </div>
     <div class="row">
-      <button class="btn" id="btn-again">Main Lagi</button>
       <button class="btn ghost" id="btn-change">Ganti Karakter</button>
     </div>
   </div>
 
+  <!-- overlays whatever screen is up rather than replacing it, so it is deliberately
+       outside the list show() switches between -->
+  <div class="layer" id="scr-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="badge modal-card fade">
+      <h2 id="modal-title"></h2>
+      <div id="modal-body"></div>
+      <button class="btn merah" id="modal-close">Tutup</button>
+    </div>
+  </div>
+
   <img id="brandmark" src="assets/revou-logo.png" alt="RevoU">
-  <button id="mute" title="Suara">🔊</button>
+  <button id="mute"></button>
 </div>
 
 <script>
@@ -360,6 +613,11 @@ const LEAD_ENDPOINT = "https://script.google.com/macros/s/AKfycbyFxWRm-h0KbJyovY
 /* /swe serves the SWE prize table, everything else DA. The host rewrites /swe/*
    to this same file (see README > Variants), so the path is the only signal. */
 const VARIANT = /(^|\/)swe(\/|$)/i.test(location.pathname) ? "swe" : "da";
+
+/* The headline figure, which differs per variant: SWE tops out at 3.5 juta early
+   bird + 1.5 juta, DA at 2 juta. Quoted in one place so the title chip and the
+   Hadiah panel can never drift apart or advertise the other track's number. */
+const DISKON_MAX = VARIANT === "swe" ? "Rp5.000.000" : "Rp2.000.000";
 
 /* Development mirror of the table in Code.gs, used only when LEAD_ENDPOINT is
    empty. Code.gs is the source of truth — the live page never sees the weights. */
@@ -420,7 +678,7 @@ let bandTop = 0, bandH = 0;       // the race band on screen, CSS px (always ful
 let letterboxed = false;
 let HS = 1;                       // HUD scale — CSS px per design px
 let safeT = 0, safeB = 0;         // notch / home-indicator insets, CSS px
-let muteReserve = 56;             // width the DOM mute button claims on the right
+let muteReserve = 72;             // width the DOM mute button claims on the right
 
 // env() does not resolve through getComputedStyle on a custom property, so read
 // it off an element that actually applies it
@@ -471,9 +729,11 @@ function resize(){
   // is sized against the viewport, or it would be postage-stamp small
   if(!letterboxed) HS = (SS / 720) * (SW / W);
   // the HUD row has to stop clear of the mute button, which is DOM and sizes
-  // itself off the viewport — measure it here rather than guessing per frame
+  // itself off the viewport — measure it here rather than guessing per frame.
+  // It is display:none on the title screen, so keep the last real reading rather
+  // than falling back to a guess the drawn HUD would then tuck underneath.
   const mr = document.getElementById("mute").getBoundingClientRect();
-  muteReserve = mr.width ? (SW - mr.left) + 10 : 56;
+  if(mr.width) muteReserve = (SW - mr.left) + 10;
 
   bandSpace();
 }
@@ -489,6 +749,9 @@ const show = id => {
   $("tapzone").classList.toggle("on", id === "scr-race");
   // the logo shares the top-left corner with the race HUD, so it steps aside
   $("stage").classList.toggle("racing", id === "scr-race");
+  // the title screen puts sound inside Pengaturan instead of the floating disc
+  $("stage").classList.toggle("titling", id === "scr-title");
+  closeModal();
 };
 
 /* -------------------------------------------------------------------- audio */
@@ -514,7 +777,99 @@ const sfxWhistle = () => { beep(880,.12,"square",.06); setTimeout(()=>beep(1320,
 const sfxWin     = () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,"triangle",.07), i*130));
 const sfxLose    = () => [440,392,330].forEach((f,i)=>setTimeout(()=>beep(f,.26,"triangle",.06), i*160));
 
-$("mute").onclick = () => { muted = !muted; $("mute").textContent = muted ? "🔇" : "🔊"; };
+/* inline SVG rather than 🔊/🔇: an emoji is a colour glyph, so the button's own
+   `color` never reaches it and every platform draws a different weight on the disc */
+const ICON_ON  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19zM15.5 9.2a4 4 0 0 1 0 5.6M18.4 6.6a8 8 0 0 1 0 10.8"/></svg>';
+const ICON_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19zM16 10l5 4M21 10l-5 4"/></svg>';
+
+function setMuted(v){
+  muted = v;
+  const b = $("mute");
+  b.innerHTML = muted ? ICON_OFF : ICON_ON;
+  b.setAttribute("aria-pressed", String(muted));
+  b.setAttribute("aria-label", muted ? "Nyalakan suara" : "Matikan suara");
+  // the Pengaturan switch may be open on the other side of the same state
+  const sw = document.querySelector('[data-toggle="sound"]');
+  if(sw) sw.textContent = muted ? "Mati" : "Nyala";
+}
+$("mute").onclick = () => setMuted(!muted);
+setMuted(false);
+
+/* ------------------------------------------- hadiah / ranking / pengaturan */
+
+/* Times are kept on the device only — the campaign sheet is the record of who
+   played, and a global board would need a server the game does not have. */
+const BEST_KEY = "ttm-best-" + VARIANT;
+const esc = s => String(s).replace(/[&<>"]/g, c =>
+  ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
+
+function loadBest(){
+  try {
+    const v = JSON.parse(localStorage.getItem(BEST_KEY));
+    return Array.isArray(v) ? v.filter(r => r && typeof r.t === "number") : [];
+  } catch { return []; }          // private browsing, or a hand-edited value
+}
+function recordBest(name, time){
+  const list = loadBest();
+  list.push({ n: name, t: +time.toFixed(2) });
+  list.sort((a, b) => a.t - b.t);
+  try { localStorage.setItem(BEST_KEY, JSON.stringify(list.slice(0, 5))); } catch {}
+}
+
+const MODALS = {
+  hadiah: () => ["Hadiah Merdeka", `
+    <p class="lead">Diskon program sampai dengan <b>${DISKON_MAX}</b>.</p>
+    <ol class="steps">
+      <li>Masukkan emailmu — hadiahnya langsung dikunci atas namamu.</li>
+      <li>Pilih pelompat, lalu tap secepat mungkin sampai garis finis.</li>
+      <li>Hadiah muncul di akhir balapan. Semua yang finis kebagian.</li>
+    </ol>
+    <p class="fine">Satu hadiah per alamat email.</p>`],
+
+  ranking: () => {
+    const list = loadBest();
+    return ["Waktu Terbaik", list.length
+      ? `<ol class="ranklist">${list.map(r =>
+          `<li><span>${esc(r.n)}</span><b>${r.t.toFixed(2)}s</b></li>`).join("")}</ol>
+         <p class="fine">Tersimpan di perangkat ini.</p>`
+      : `<p class="lead">Belum ada catatan waktu.</p>
+         <p class="fine">Selesaikan satu balapan dan waktumu muncul di sini.</p>`];
+  },
+
+  settings: () => ["Pengaturan", `
+    <div class="switch"><span>Suara</span>
+      <button class="btn merah" data-toggle="sound">${muted ? "Mati" : "Nyala"}</button></div>
+    <p class="fine">Tap layar, atau tekan Spasi, untuk melompat.</p>`],
+};
+
+let lastFocus = null;
+function openModal(kind){
+  const build = MODALS[kind];
+  if(!build) return;
+  const [title, body] = build();
+  $("modal-title").textContent = title;
+  $("modal-body").innerHTML = body;
+  lastFocus = document.activeElement;
+  $("scr-modal").classList.add("on");
+  $("modal-close").focus({ preventScroll: true });
+  beep(620, .07, "square", .05);
+}
+function closeModal(){
+  const m = $("scr-modal");
+  if(!m.classList.contains("on")) return;
+  m.classList.remove("on");
+  if(lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
+}
+
+// delegated: ranking and pengaturan each appear twice in the markup — once in the
+// top row, once in the phone layout's sub-nav — and only one copy is ever visible
+document.addEventListener("click", ev => {
+  const nav = ev.target.closest("[data-nav]");
+  if(nav){ openModal(nav.dataset.nav); return; }
+  if(ev.target.closest('[data-toggle="sound"]')) setMuted(!muted);
+});
+$("modal-close").onclick = closeModal;
+$("scr-modal").addEventListener("click", ev => { if(ev.target === $("scr-modal")) closeModal(); });
 
 /* --------------------------------------------------------------- the racers */
 
@@ -901,10 +1256,12 @@ function drawFinish(){
   if(p.nx < -320 || p.fx > W + 320) return;
   const s = SS / 720;
 
-  // chequered ribbon on the grass: real squares laid along the slant, two rows
-  // deep, rather than one dashed line pretending to be a chequerboard
+  /* Just the line on the grass — no gantry, no flagpoles. It runs at the same
+     ~45deg as the lanes, and anything standing across it (a board slung between
+     two poles) only ever read as a ramp lying over the track. Three rows of
+     real squares, so it carries on its own. */
   const dx = p.nx - p.fx, dy = p.ny - p.fy;
-  const len = Math.hypot(dx, dy), cell = 9 * s, rows = 2;
+  const len = Math.hypot(dx, dy), cell = 11 * s, rows = 3;
   ctx.save();
   ctx.translate(p.fx, p.fy); ctx.rotate(Math.atan2(dy, dx));
   for(let r = 0; r < rows; r++){
@@ -914,74 +1271,6 @@ function drawFinish(){
     }
   }
   ctx.restore();
-
-  /* Gantry, built in perspective. Each pole stands on its OWN end of the finish
-     line — the far one on the far lane, shorter and thinner for the distance —
-     and the board spans their two tops, so it slants and tapers with them
-     instead of hanging as a flat rectangle across a slanted line. */
-  const fs = laneScale(3), ns = laneScale(0);          // depth scale at each end
-  const poleH = 250 * s;
-  const fTop = p.fy - poleH * fs, nTop = p.ny - poleH * ns;
-
-  const pole = (x, base, top, k) => {
-    const w = 15 * s * k;
-    ctx.fillStyle = "#7d5a3c";
-    roundRect(x - w / 2, top, w, base - top, w * .3); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.18)";
-    roundRect(x - w / 2, top, w * .36, base - top, w * .3); ctx.fill();
-    ctx.fillStyle = KUNING_2;                          // gold cap, with a pennant
-    ctx.beginPath(); ctx.arc(x, top - 3 * s * k, 6 * s * k, 0, 7); ctx.fill();
-    ctx.fillStyle = MERAH;
-    ctx.beginPath();
-    ctx.moveTo(x, top - 9 * s * k);
-    ctx.lineTo(x + 32 * s * k, top - 1 * s * k);
-    ctx.lineTo(x, top + 7 * s * k);
-    ctx.closePath(); ctx.fill();
-  };
-  pole(p.fx, p.fy, fTop, fs);                          // far first: the near one
-  pole(p.nx, p.ny, nTop, ns);                          // reads as being in front
-
-  // the board hangs a little below the caps, so the pennants stay clear of it
-  const ax = p.fx, ay = fTop + 34 * s * fs;
-  const bx = p.nx, by = nTop + 34 * s * ns;
-  const blen = Math.hypot(bx - ax, by - ay);
-  const over = 24 * s;                                 // overhang past each pole
-  const x0 = -over, x1 = blen + over;
-  const hf = 34 * s * fs, hn = 34 * s * ns;            // half-height at each end
-  const h0 = lerp(hf, hn, x0 / blen), h1 = lerp(hf, hn, x1 / blen);
-
-  ctx.save();
-  ctx.translate(ax, ay);
-  ctx.rotate(Math.atan2(by - ay, bx - ax));
-  // one trapezoid, offset for the shadow and inset for the keyline
-  const slab = (d, dy) => {
-    ctx.beginPath();
-    ctx.moveTo(x0 + d, -h0 + d + dy); ctx.lineTo(x1 - d, -h1 + d + dy);
-    ctx.lineTo(x1 - d, h1 - d + dy); ctx.lineTo(x0 + d, h0 - d + dy);
-    ctx.closePath();
-  };
-  ctx.fillStyle = EMAS_BAYANG; slab(0, 7 * s); ctx.fill();
-  ctx.fillStyle = PUTIH;       slab(0, 0);     ctx.fill();
-  ctx.save();
-  slab(5 * s, 0); ctx.clip();
-  ctx.fillStyle = MERAH; slab(0, 0); ctx.fill();       // red field…
-  ctx.fillStyle = KUNING_2;                            // …with a gold lower band
-  ctx.beginPath();
-  ctx.moveTo(x0, h0 * .16); ctx.lineTo(x1, h1 * .16);
-  ctx.lineTo(x1, h1); ctx.lineTo(x0, h0);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
-
-  const k = (fs + ns) / 2, hm = (h0 + h1) / 2;
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = KUNING_2;
-  ctx.font = `bold ${Math.round(34 * s * k)}px ${FONT}`;
-  ctx.fillText("FINISH", blen / 2, -hm * .34);
-  ctx.fillStyle = MERAH;
-  ctx.font = `bold ${Math.round(19 * s * k)}px ${FONT}`;
-  ctx.fillText("17 AGUSTUS", blen / 2, hm * .55);
-  ctx.restore();
-  ctx.textBaseline = "alphabetic";
 }
 
 // idle sways between Stand and Ready; mid-race it is Ready on the ground,
@@ -1540,6 +1829,7 @@ function endRace(){
        <span>${CHARS[r.ci].name}</span>
        <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
      </div>`).join("");
+  if(board[meIdx].done) recordBest(CHARS[board[meIdx].ci].name, board[meIdx].time);
   // everyone who finishes keeps the prize their email drew — placing does not gate it
   $("prize-text").textContent = prize;
   $("prize").style.display = prize ? "" : "none";
@@ -1589,17 +1879,21 @@ $("email-form").onsubmit = async ev => {
 
 $("btn-play").onclick   = () => { beep(660,.1,"square",.06); toEmail(); };
 $("btn-go").onclick     = () => { beep(660,.1,"square",.06); startRace(); };
-$("btn-again").onclick  = () => startRace();
 $("btn-change").onclick = () => toSelect();
 
 const zone = $("tapzone");
 zone.addEventListener("pointerdown", e => { e.preventDefault(); tap(); });
 window.addEventListener("keydown", e => {
+  if(e.code === "Escape"){ closeModal(); return; }
+  // an overlay is up: Space must not fall through and jump the racer behind it
+  if($("scr-modal").classList.contains("on")) return;
   if(e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter"){
     e.preventDefault();
-    if(state === "title") toSelect();
+    // the same route the MULAI button takes — Space used to reach the picker
+    // directly, which walked straight past the email gate the campaign runs on
+    if(state === "title") toEmail();
     else if(state === "select") startRace();
-    else if(state === "done") startRace();
+    else if(state === "done") return;   // no replay from the results card
     else tap();
   }
   if(state === "select" && (e.code === "ArrowLeft" || e.code === "ArrowRight")){
@@ -1619,6 +1913,7 @@ CHARS.forEach(c => POSES.forEach(p => {
 // nothing else on the title screen forces the bold weight early enough
 if(document.fonts) document.fonts.load('700 40px "IBM Plex Sans"');
 
+$("diskon-max").textContent = DISKON_MAX + "!";
 buildPicker();
 makeRacers();
 resize();

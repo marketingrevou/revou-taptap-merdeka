@@ -1,4 +1,5 @@
-# Deploy only what the game loads at runtime: index.html, sprites/, assets/, fonts/.
+# Deploy only what the game loads at runtime: index.html, sprites/, assets/, fonts/,
+# and the title-screen plates in images/.
 
 .venv/
 __pycache__/
@@ -10,7 +11,14 @@ Characters.png
 Jump.png
 Ready.png
 Stand.png
-images/
+images/karakter-*
+
+# images/ is no longer sources-only: the title screen fetches images/bg.jpg and
+# images/title.webp from here, and images/title.png has to ship too because it is
+# the <picture> fallback for browsers without WebP. Only bg.png is excluded — it is
+# the source plate for bg.jpg and nothing requests it at runtime. Ignoring the whole
+# directory, as this file used to, ships a title screen with no background or logo.
+images/bg.png
 
 # Build-time only.
 tools/
