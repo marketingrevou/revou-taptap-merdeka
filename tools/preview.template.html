@@ -1,0 +1,592 @@
+<title>Tap Tap Merdeka — Sound Audit</title>
+<style>
+  @font-face{
+    font-family:"IBM Plex Sans";
+    src:url("data:font/woff2;base64,__FONT__") format("woff2");
+    font-weight:100 700;font-style:normal;font-display:block;
+  }
+
+  /* Committed to one visual world: this is studio equipment, not a document.
+     Every colour is painted explicitly so the page holds on either host ground.
+     Hues are the campaign's own tokens, dropped to a console surface. */
+  :root{
+    --ground:#170d0a;      /* near-black, biased red rather than grey */
+    --panel:#241511;
+    --panel-hi:#32201a;
+    --line:#43291f;
+    --merah:#dd1f26;
+    --emas:#ffde3b;        /* the badge gold: spent only on "this is live" */
+    --krem:#fff3b6;
+    --teks:#ecd9cc;
+    --redup:#a28375;
+    --held:#74c47c;
+    --patah:#ff6b52;
+    --r:6px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--ground);color:var(--teks);
+    font-family:"IBM Plex Sans","Trebuchet MS",sans-serif;
+    font-weight:400;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px) 72px}
+
+  /* ---------------------------------------------------------------- masthead */
+  header{display:flex;flex-direction:column;gap:14px;padding-bottom:26px;
+         border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+           color:var(--merah)}
+  h1{margin:0;font-size:clamp(30px,5.4vw,50px);font-weight:700;line-height:1.02;
+     letter-spacing:-.02em;color:var(--krem);text-wrap:balance}
+  h1 em{font-style:normal;color:var(--emas)}
+  .thesis{margin:0;max-width:64ch;color:var(--redup);font-size:15px}
+  .thesis b{color:var(--teks);font-weight:600}
+
+  /* ------------------------------------------------------------------ panels */
+  section{margin-top:44px}
+  .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h2{margin:0;font-size:19px;font-weight:700;color:var(--krem);letter-spacing:-.01em}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--redup);
+       border:1px solid var(--line);border-radius:100px;padding:2px 9px}
+  .note{margin:0 0 18px;max-width:66ch;color:var(--redup);font-size:14px}
+  .note b{color:var(--teks);font-weight:600}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+         padding:clamp(16px,2.4vw,24px)}
+
+  /* --------------------------------------------------------------- transport */
+  .lamps{display:flex;gap:6px;margin-bottom:18px}
+  .lamp{flex:1;height:34px;border-radius:3px;background:var(--panel-hi);
+        border:1px solid var(--line);position:relative;overflow:hidden}
+  .lamp::after{content:"";position:absolute;inset:0;background:var(--emas);opacity:0;
+               transition:opacity .09s linear}
+  .lamp.lit::after{opacity:.92}
+  .lamp.down{border-color:#6b4a1c}
+  .lamp span{position:absolute;left:5px;top:4px;font-family:var(--mono);font-size:10px;
+             color:var(--redup);z-index:2}
+  .lamp.lit span{color:#3a2408}
+
+  .cadences{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+  .cad{appearance:none;text-align:left;cursor:pointer;font:inherit;
+       background:var(--panel-hi);color:var(--teks);
+       border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;
+       display:flex;flex-direction:column;gap:3px;transition:border-color .15s,background .15s}
+  .cad:hover{border-color:#6b4a1c;background:#3a251d}
+  .cad[aria-pressed="true"]{border-color:var(--emas);background:#3d2a12}
+  .cad b{font-size:15px;font-weight:600;color:var(--krem)}
+  .cad[data-verdict="win"] b{color:var(--held)}
+  .cad[data-verdict="lose"] b{color:var(--patah)}
+  .cad small{font-family:var(--mono);font-size:11px;color:var(--redup);line-height:1.45}
+
+  .readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+           gap:1px;margin-top:18px;background:var(--line);
+           border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .cell{background:var(--panel-hi);padding:11px 13px}
+  .cell dt{font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+           color:var(--redup);margin:0 0 3px}
+  .cell dd{margin:0;font-family:var(--mono);font-size:19px;font-variant-numeric:tabular-nums;
+           color:var(--krem);line-height:1.15}
+  .cell dd u{text-decoration:none;font-size:12px;color:var(--redup)}
+  .cell.good dd{color:var(--held)} .cell.bad dd{color:var(--patah)}
+
+  /* ------------------------------------------------------------------ layers */
+  .layers{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+          border-radius:var(--r);overflow:hidden}
+  .layer{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:14px;
+         background:var(--panel-hi);padding:12px 15px;cursor:pointer;
+         border:0;font:inherit;color:inherit;text-align:left;width:100%;
+         transition:background .15s}
+  .layer:hover{background:#3a251d}
+  .layer .sw{width:52px;height:26px;border-radius:100px;background:#472e24;
+             border:1px solid var(--line);position:relative;transition:background .18s}
+  .layer .sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;
+                    border-radius:50%;background:var(--redup);transition:transform .18s,background .18s}
+  .layer[aria-pressed="true"] .sw{background:#6b4a12;border-color:#8a6318}
+  .layer[aria-pressed="true"] .sw::after{transform:translateX(26px);background:var(--emas)}
+  .layer .who{display:flex;flex-direction:column;gap:1px}
+  .layer .who b{font-size:15px;font-weight:600;color:var(--krem)}
+  .layer .who small{font-size:13px;color:var(--redup)}
+  .layer .spec{font-family:var(--mono);font-size:11px;color:var(--redup);
+               text-align:right;white-space:nowrap}
+
+  .states{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+  /* -------------------------------------------------------------------- pads */
+  .pads{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
+  .pad{appearance:none;cursor:pointer;font:inherit;text-align:left;
+       background:var(--panel-hi);color:var(--teks);border:1px solid var(--line);
+       border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:2px;
+       transition:border-color .12s,background .12s,transform .06s}
+  .pad:hover{border-color:#6b4a1c;background:#3a251d}
+  .pad:active,.pad.hit{transform:translateY(1px);border-color:var(--emas);background:#3d2a12}
+  .pad b{font-size:14px;font-weight:600;color:var(--krem)}
+  .pad small{font-family:var(--mono);font-size:10.5px;color:var(--redup)}
+  .pad.gap{border-style:dashed;border-color:#5c3a2a}
+  .pad.gap b{color:var(--patah)}
+
+  .btn{appearance:none;cursor:pointer;font:inherit;font-size:13px;font-weight:600;
+       background:var(--panel-hi);color:var(--teks);border:1px solid var(--line);
+       border-radius:var(--r);padding:9px 15px;transition:border-color .15s,background .15s}
+  .btn:hover{border-color:#6b4a1c;background:#3a251d}
+  .btn[aria-pressed="true"]{border-color:var(--emas);background:#3d2a12;color:var(--krem)}
+  .btn.merah{background:var(--merah);border-color:var(--merah);color:#fff}
+  .btn.merah:hover{background:#c9171e;border-color:#c9171e}
+
+  .ladder{display:flex;flex-wrap:wrap;gap:6px}
+  .rung{appearance:none;cursor:pointer;font-family:var(--mono);font-size:12px;
+        background:var(--panel-hi);color:var(--teks);border:1px solid var(--line);
+        border-radius:4px;padding:8px 0;width:60px;text-align:center;
+        transition:border-color .12s,background .12s}
+  .rung:hover,.rung.hit{border-color:var(--emas);background:#3d2a12;color:var(--krem)}
+  .rung u{display:block;text-decoration:none;font-size:9.5px;color:var(--redup)}
+
+  .bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;
+       padding-top:18px;border-top:1px solid var(--line)}
+  .bar label{font-size:12px;color:var(--redup);display:flex;align-items:center;gap:9px}
+  input[type=range]{accent-color:var(--emas);width:130px}
+
+  footer{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);
+         color:var(--redup);font-size:13px;max-width:70ch}
+  footer code{font-family:var(--mono);font-size:12px;color:var(--teks)}
+  a{color:var(--emas)}
+
+  :focus-visible{outline:2px solid var(--emas);outline-offset:2px}
+
+  .boot{position:fixed;inset:0;background:rgba(11,6,5,.93);display:grid;place-items:center;
+        z-index:50;padding:24px;text-align:center}
+  .boot div{max-width:34ch;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .boot p{margin:0;color:var(--redup);font-size:14px}
+  .boot.off{display:none}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition-duration:0s!important}
+  }
+</style>
+
+<div class="boot" id="boot">
+  <div>
+    <p>Browsers will not start audio until you ask them to.</p>
+    <button class="btn merah" id="boot-go" type="button">Start the audio engine</button>
+    <p id="boot-msg" style="font-size:12.5px"></p>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Balap Karung · sound audit</p>
+    <h1>Every cue in the game, and the one number <em>the whole design hangs on</em>.</h1>
+    <p class="thesis">
+      The race is a rhythm game wearing a sack-race costume. <b>HOP_TIME</b> 0.30&nbsp;s,
+      <b>BUFFER</b> 0.10&nbsp;s and <b>PERFECT</b> 0.18&nbsp;s pin the combo-sustaining tap
+      cycle to <b>0.20–0.48&nbsp;s</b> — so the music is <b>160&nbsp;BPM</b>, and the kendang
+      on every quarter note is the tempo that wins. Everything here is synthesised by
+      <code style="font-family:var(--mono);font-size:13px">tools/make_audio.py</code>.
+    </p>
+  </header>
+
+  <section>
+    <div class="head">
+      <h2>The thesis, audible</h2><span class="tag">160 BPM · beat 375 ms</span>
+    </div>
+    <p class="note">
+      The pulse plays underneath while a simulation taps at the cadence you pick, running the
+      <b>real</b> hop/land/trip logic from <code style="font-family:var(--mono)">index.html</code>.
+      Listen for whether the taps sit on the drum — and watch the combo. The 120&nbsp;BPM row is
+      the trap: it is a perfectly natural march tempo that lands <i>outside</i> the combo window.
+    </p>
+    <div class="panel">
+      <div class="lamps" id="lamps"></div>
+      <div class="cadences" id="cadences"></div>
+      <dl class="readout" id="readout"></dl>
+      <div class="bar">
+        <button class="btn" id="stop" type="button">Stop</button>
+        <label>Volume <input type="range" id="vol" min="0" max="100" value="75"></label>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Music layers</h2><span class="tag">same key, same tempo</span></div>
+    <p class="note">
+      One musical idea in four stems rather than five separate tracks, so a state change adds or
+      drops a layer instead of cutting to a new cue. They start phase-locked and stay that way —
+      the drum loop is 3.0&nbsp;s and the melody 6.0&nbsp;s, so one divides the other exactly.
+      <b>Hook enters at combo ≥ 4</b>: the music thickens when you are doing it right.
+    </p>
+    <div class="panel">
+      <div class="layers" id="layers"></div>
+      <div class="states" id="states"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Cues</h2><span class="tag">one sprite sheet · 14 slices</span></div>
+    <p class="note">
+      Dashed pads are the moments that are <b>silent in the game today</b> — the trip is the only
+      punishment the race has and it makes no sound at all, so a player who mashes just gets
+      slower with no idea why.
+    </p>
+    <div class="panel">
+      <div class="pads" id="pads"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Combo ladder</h2><span class="tag">one file · 12 pitches</span></div>
+    <p class="note">
+      <code style="font-family:var(--mono)">COMBO_MAX</code> is 12, which is exactly twelve steps
+      of D major pentatonic. One recorded cue, pitched by playback rate, so the ladder costs no
+      extra bytes — and the rising line teaches the rhythm better than any number on screen.
+    </p>
+    <div class="panel">
+      <div class="ladder" id="ladder"></div>
+      <div class="bar"><button class="btn" id="run-ladder" type="button">Climb all twelve</button></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Synthesised locally — no generative audio model in the loop. Every asset is regenerated by
+      <code>.venv/bin/python tools/make_audio.py &amp;&amp; tools/encode_audio.sh</code>, and the
+      whole set encodes to <b id="total-kb">—</b> of AAC. The design, the Higgsfield prompts for
+      the organic layers, and the level table all live in <code>SOUND.md</code>.
+    </p>
+  </footer>
+</div>
+
+<script>
+const A = __ASSETS__;
+
+/* the game's own constants -- the simulation below is only honest if these match */
+const HOP_TIME = 0.30, HOP_DIST = 62, PERFECT = 0.18, BUFFER = 0.10,
+      COMBO_MAX = 12, RACE_LEN = 2400;
+const BPM = 160, BEAT = 60 / BPM, PULSE_BARS = 2, SIM = 9.0;
+
+/* D major pentatonic, one rung per combo step (SOUND.md) */
+const LADDER = [587.33, 659.26, 739.99, 880.00, 987.77, 1174.66,
+                1318.51, 1479.98, 1760.00, 1975.53, 2349.32, 2637.02];
+const RUNG_NAME = ["D5","E5","F#5","A5","B5","D6","E6","F#6","A6","B6","D7","E7"];
+
+const CUES = [
+  ["hop",        "Hop",           "hop()",             false],
+  ["perfect",    "Perfect",       "combo held",        false],
+  ["land",       "Land",          "land()",            false],
+  ["trip",       "Trip",          "no hook today",     true ],
+  ["dud",        "Dud tap",       "no hook today",     true ],
+  ["tick",       "Countdown",     "step()",            false],
+  ["roll",       "Kendang roll",  "into the downbeat", false],
+  ["whistle",    "Start whistle", "sfxWhistle",        false],
+  ["tape",       "Finish tape",   "no hook today",     true ],
+  ["lose",       "Not first",     "endRace()",         false],
+  ["prize",      "Prize reveal",  "no hook today",     true ],
+  ["ui-select",  "Picker",        "setPick()",         false],
+  ["ui-confirm", "Confirm",       "buttons",           false],
+  ["ui-open",    "Modal",         "openModal()",       false],
+];
+
+const STEMS = [
+  ["bed",   "Bed",   "angklung ostinato, no pulse", "title → picker",  "6.0 s · −24 dB"],
+  ["crowd", "Crowd", "the kampung, underneath",     "everywhere",      "6.0 s · −26 dB"],
+  ["pulse", "Pulse", "kendang on every quarter",    "the tap grid",    "3.0 s · −20 dB"],
+  ["hook",  "Hook",  "tanjidor brass",              "combo ≥ 4",       "6.0 s · −21 dB"],
+];
+
+const PRESETS = [
+  {id:"beat", label:"On the beat", bpm:160, gap:0.375, jitter:0.08,
+   why:"375 ms — the drum. Tap with it."},
+  {id:"late", label:"Half a beat late", bpm:120, gap:0.500, jitter:0.08,
+   why:"500 ms — outside the window. The trap."},
+  {id:"mash", label:"Mashing", bpm:null, gap:0.070, jitter:0.30,
+   why:"As fast as possible. Trips constantly."},
+];
+
+/* ------------------------------------------------------------------- engine */
+let ctx, master, sheet = null, stems = {}, playing = new Set(), t0 = 0, running = null;
+
+async function boot(){
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = 0.75;
+  master.connect(ctx.destination);
+  const grab = async uri => ctx.decodeAudioData(
+    Uint8Array.from(atob(uri), c => c.charCodeAt(0)).buffer);
+  sheet = await grab(A.sfx);
+  await Promise.all(Object.keys(A.stems).map(async k => { stems[k] = await grab(A.stems[k]); }));
+}
+
+function one(name, rate = 1, gain = 1, when = 0){
+  if(!sheet) return;
+  const s = A.map.cues[name];
+  if(!s) return;
+  const src = ctx.createBufferSource();
+  src.buffer = sheet;
+  src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  src.connect(g).connect(master);
+  // slice the sheet: offset and duration come straight from sfx.json
+  src.start(when || ctx.currentTime, s.at, s.dur / rate);
+  return src;
+}
+
+/* Every stem starts at the same t0 and never stops -- toggling only rides its
+   gain. Restarting a source to "turn it on" is what makes layers drift apart. */
+function ensureStems(){
+  if(t0) return;
+  t0 = ctx.currentTime + 0.08;
+  for(const [id] of STEMS){
+    const src = ctx.createBufferSource();
+    src.buffer = stems[id];
+    src.loop = true;
+    src.loopStart = 0;
+    /* NOT the decoded duration. AAC pads to whole 1024-sample frames and Chrome
+       does not trim the trailing padding, so a stem decodes 7-14 ms long and
+       looping on that drifts the grid every pass. sfx.json carries the exact
+       musical length. */
+    src.loopEnd = A.map.loops[id] || stems[id].duration;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    src.connect(g).connect(master);
+    src.start(t0);
+    stems[id + ":gain"] = g;
+  }
+}
+
+function layer(id, on, ramp = 0.09){
+  ensureStems();
+  const g = stems[id + ":gain"];
+  if(!g) return;
+  g.gain.cancelScheduledValues(ctx.currentTime);
+  g.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, ramp);
+  on ? playing.add(id) : playing.delete(id);
+  paintLayers();
+}
+
+/* --------------------------------------------------- the game, simulated 1:1 */
+function simulate(gap, jitter, dur){
+  const dt = 0.001;
+  let air = false, hopT = 0, groundT = 9, combo = 0, lock = 0, wasted = 0,
+      buffered = false, x = 0, step = 0, next = 0;
+  const ev = [];
+  let hops = 0, peak = 0, trips = 0, perfects = 0;
+
+  const doHop = t => {
+    air = true; hopT = 0; hops++;
+    const perfect = groundT <= PERFECT;
+    combo = perfect ? Math.min(combo + 1, COMBO_MAX) : 0;
+    peak = Math.max(peak, combo);
+    step = HOP_DIST * (1 + combo * 0.028);
+    if(perfect && combo > 1){ perfects++; ev.push({t, cue:"perfect", combo}); }
+    else ev.push({t, cue:"hop"});
+  };
+
+  for(let t = 0; t < dur; t += dt){
+    if(t >= next){
+      next = t + gap * (1 + (Math.random() * 2 - 1) * jitter);
+      if(!air){
+        if(lock <= 0) doHop(t); else ev.push({t, cue:"dud"});
+      } else if(HOP_TIME - hopT <= BUFFER){
+        buffered = true;                       // forgiving early tap
+      } else {
+        combo = 0; wasted++; trips++; ev.push({t, cue:"trip"});
+      }
+    }
+    if(air){
+      hopT += dt;
+      x += (step / HOP_TIME) * dt;
+      if(hopT >= HOP_TIME){
+        air = false; hopT = 0; groundT = 0;
+        if(wasted){ lock = 0.11 + Math.min(wasted, 2) * 0.045; buffered = false; wasted = 0; }
+        ev.push({t, cue:"land"});
+        if(buffered && lock <= 0){ buffered = false; doHop(t); }
+      }
+    } else {
+      groundT += dt;
+      lock = Math.max(0, lock - dt);
+    }
+  }
+  return {ev, hops, peak, trips, perfects, x};
+}
+
+function play(preset){
+  stop(true);
+  const r = simulate(preset.gap, preset.jitter, SIM);
+
+  // the pulse is the point of comparison, so it goes on for every cadence
+  layer("pulse", true, 0.02);
+  layer("crowd", true, 0.02);
+
+  /* Two things this demo would be dishonest without. Every cue is scheduled on
+     the audio clock rather than setTimeout, whose few ms of jitter would smear
+     the very 375 ms grid being demonstrated; and the first tap is quantised to
+     the next downbeat, so "on the beat" audibly lands ON the kendang instead of
+     at some arbitrary phase against it. */
+  const elapsed = ctx.currentTime - t0;
+  const start = t0 + Math.ceil((elapsed + 0.15) / BEAT) * BEAT;
+
+  const srcs = [];
+  for(const e of r.ev){
+    const at = start + e.t;
+    if(e.cue === "perfect")
+      srcs.push(one("perfect", LADDER[Math.min(e.combo, COMBO_MAX) - 1] / LADDER[0], 1, at));
+    else
+      srcs.push(one(e.cue, 1, e.cue === "land" ? 0.7 : 1, at));
+  }
+  const end = setTimeout(() => stop(), (start - ctx.currentTime + SIM + 0.6) * 1000);
+
+  running = {preset, srcs: srcs.filter(Boolean), end, start, r};
+  paintCadences();
+  paintReadout(r, preset);
+}
+
+function stop(quiet){
+  if(running){
+    clearTimeout(running.end);
+    for(const s of running.srcs){ try { s.stop(); } catch (e) { /* already done */ } }
+    running = null;
+  }
+  if(!quiet){
+    layer("pulse", false, 0.25);
+    layer("crowd", false, 0.25);
+    paintCadences();
+  }
+}
+
+/* -------------------------------------------------------------------- paint */
+const $ = id => document.getElementById(id);
+const BEATS = PULSE_BARS * 4;
+
+function buildLamps(){
+  $("lamps").innerHTML = Array.from({length: BEATS}, (_, i) =>
+    `<div class="lamp${i % 2 === 0 ? " down" : ""}" data-i="${i}"><span>${i + 1}</span></div>`
+  ).join("");
+}
+
+let lastLit = -1;
+function tickLamps(){
+  requestAnimationFrame(tickLamps);
+  if(!ctx || !t0) return;
+  const live = playing.has("pulse");
+  const beat = live ? Math.floor(((ctx.currentTime - t0) / BEAT) % BEATS) : -1;
+  if(beat === lastLit) return;
+  lastLit = beat;
+  document.querySelectorAll(".lamp").forEach((el, i) =>
+    el.classList.toggle("lit", i === beat));
+}
+
+function paintCadences(){
+  $("cadences").innerHTML = PRESETS.map(p => `
+    <button class="cad" type="button" data-id="${p.id}"
+            aria-pressed="${running?.preset.id === p.id}">
+      <b>${p.label}</b>
+      <small>${p.bpm ? p.bpm + " BPM · " : ""}${Math.round(p.gap * 1000)} ms<br>${p.why}</small>
+    </button>`).join("");
+  for(const el of $("cadences").children){
+    el.onclick = () => {
+      const p = PRESETS.find(q => q.id === el.dataset.id);
+      running?.preset.id === p.id ? stop() : play(p);
+    };
+  }
+}
+
+function paintReadout(r, preset){
+  const finish = r.x > 0 ? SIM * RACE_LEN / r.x : Infinity;
+  const wins = finish <= 14.5;                    // the pack lands around here
+  const cells = [
+    ["Hops", r.hops, ""],
+    ["Combo peak", r.peak + " / 12", ""],
+    ["Perfects", r.perfects, ""],
+    ["Trips", r.trips, r.trips > 3 ? "bad" : r.trips === 0 ? "good" : ""],
+    ["Track covered", Math.round(r.x) + " <u>px</u>", ""],
+    ["Finish in", (finish === Infinity ? "—" : finish.toFixed(1)) + " <u>s</u>",
+     wins ? "good" : "bad"],
+  ];
+  $("readout").innerHTML = cells.map(([k, v, cls]) =>
+    `<div class="cell ${cls}"><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  const btn = $("cadences").querySelector(`[data-id="${preset.id}"]`);
+  if(btn) btn.dataset.verdict = wins ? "win" : "lose";
+}
+
+function paintLayers(){
+  for(const el of $("layers").children)
+    el.setAttribute("aria-pressed", String(playing.has(el.dataset.id)));
+  for(const el of $("states").children)
+    el.setAttribute("aria-pressed", String(el.dataset.on === "1"));
+}
+
+function buildLayers(){
+  $("layers").innerHTML = STEMS.map(([id, name, what, when, spec]) => `
+    <button class="layer" type="button" data-id="${id}" aria-pressed="false">
+      <span class="sw" aria-hidden="true"></span>
+      <span class="who"><b>${name}</b><small>${what} — ${when}</small></span>
+      <span class="spec">${spec}</span>
+    </button>`).join("");
+  for(const el of $("layers").children)
+    el.onclick = () => layer(el.dataset.id, !playing.has(el.dataset.id));
+
+  const SET = [
+    ["Title / picker", ["bed", "crowd"]],
+    ["Race", ["pulse", "crowd"]],
+    ["Race + combo", ["pulse", "hook", "crowd"]],
+    ["Silence", []],
+  ];
+  $("states").innerHTML = SET.map(([label], i) =>
+    `<button class="btn" type="button" data-i="${i}" data-on="0">${label}</button>`).join("");
+  for(const el of $("states").children){
+    el.onclick = () => {
+      const want = SET[+el.dataset.i][1];
+      for(const [id] of STEMS) layer(id, want.includes(id));
+      for(const s of $("states").children) s.dataset.on = s === el ? "1" : "0";
+      paintLayers();
+    };
+  }
+}
+
+function buildPads(){
+  $("pads").innerHTML = CUES.map(([id, name, where, gap]) => `
+    <button class="pad${gap ? " gap" : ""}" type="button" data-id="${id}">
+      <b>${name}</b><small>${where}</small></button>`).join("");
+  for(const el of $("pads").children){
+    el.onclick = () => {
+      one(el.dataset.id);
+      el.classList.add("hit");
+      setTimeout(() => el.classList.remove("hit"), 130);
+    };
+  }
+}
+
+function buildLadder(){
+  $("ladder").innerHTML = LADDER.map((f, i) =>
+    `<button class="rung" type="button" data-i="${i}">${i + 1}<u>${RUNG_NAME[i]}</u></button>`
+  ).join("");
+  for(const el of $("ladder").children)
+    el.onclick = () => one("perfect", LADDER[+el.dataset.i] / LADDER[0]);
+  $("run-ladder").onclick = () => LADDER.forEach((f, i) => setTimeout(() => {
+    one("perfect", f / LADDER[0]);
+    const el = $("ladder").children[i];
+    el.classList.add("hit");
+    setTimeout(() => el.classList.remove("hit"), 150);
+  }, i * 140));
+}
+
+/* --------------------------------------------------------------------- wire */
+buildLamps(); paintCadences(); buildLayers(); buildPads(); buildLadder();
+$("total-kb").textContent = A.totalKB + " KB";
+$("vol").oninput = e => { if(master) master.gain.value = e.target.value / 100; };
+$("stop").onclick = () => stop();
+tickLamps();
+
+$("boot-go").onclick = async () => {
+  $("boot-msg").textContent = "decoding…";
+  try {
+    await boot();
+    $("boot").classList.add("off");
+  } catch (err) {
+    $("boot-msg").textContent = "Could not decode the audio: " + err.message;
+    console.error(err);
+  }
+};
+</script>

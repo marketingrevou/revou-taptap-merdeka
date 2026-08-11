@@ -7,3 +7,9 @@ __pycache__/
 .DS_Store
 .vercel
 .env*
+
+# Audio intermediates. tools/make_audio.py writes the WAVs and tools/encode_audio.sh
+# turns them into the audio/*.m4a that ship; the WAVs are 2.9 MB of nothing anyone
+# needs to check out. preview.html is a 300 KB generated audition page.
+audio/wav/
+audio/preview.html

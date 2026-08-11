@@ -63,6 +63,26 @@ plus the CPU pace in `makeRacers()` (`r.skill`, `r.wait`) and the rubber-band
 coefficients in `step()`. Raise `r.wait` to make the opponents easier, lower it to
 make them meaner.
 
+## Sound
+
+The race is a rhythm game in a sack-race costume, so the music is a game mechanic: the
+kendang lands every 375 ms because `HOP_TIME`, `BUFFER` and `PERFECT` pin the
+combo-sustaining tap cycle to 0.20–0.48 s. Tap on the drum and the combo holds.
+
+Everything is synthesised by `tools/make_audio.py` — 15 cues on one sprite sheet plus
+four music stems, 214.5 KB of AAC, fetched at the email step so it never touches the
+critical path. `beep()` remains as the fallback for when `audio/` is unreachable, which
+includes opening `index.html` straight off the filesystem.
+
+[**SOUND.md**](SOUND.md) is the design: the tempo derivation, the level table, the two
+encoding traps worth knowing about, and prompts for generating the organic layers and the
+announcer in Higgsfield.
+
+```bash
+.venv/bin/python tools/make_audio.py && tools/encode_audio.sh
+.venv/bin/python tools/make_preview.py   # audio/preview.html — audition every cue
+```
+
 ## Variants and the prize draw
 
 One build serves two campaigns. The page reads the variant off `location.pathname`:
