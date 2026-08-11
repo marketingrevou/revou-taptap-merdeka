@@ -36,6 +36,11 @@ put the kendang on the **eighths**; the tap unit is what matters, not the number
 session. The rule is simply: the most audible pulse in the mix must repeat every
 0.20–0.48 s.
 
+This applies **only to what plays during the race.** The menu bed is deliberately at
+120 BPM — see [the menu tune](#the-menu-tune-is-hari-merdeka) — which is fine precisely
+because there is nothing to tap on those screens and it carries no percussion. The rule
+is about the pulse a player is tapping against, not about every tempo in the game.
+
 Corollary — **do not sonify the CPU racers.** Their `r.wait` is 0.152–0.39 s plus a
 rubber band, so their footfalls are deliberately off-grid and would smear the one cue
 the player is trying to lock onto. `hop()` and `land()` already gate their SFX behind
@@ -66,13 +71,14 @@ across every cue, so layers can enter and leave without a transition.
 ## Music: one cue, four layers
 
 Five separate tracks for a 60-second session means a jarring cut every 15 seconds and
-five times the bytes. Instead: **one 160 BPM, 4-bar loop (6.0 s) rendered as four
-stems in the same key.** State changes add and drop layers on a bar line — no
-crossfade, no artefacts, one musical idea the whole way through.
+five times the bytes. Instead, **stems in one key that enter and leave**, so a state
+change adds or drops a layer rather than cutting to a new cue — no crossfade, no
+artefacts. The three race stems share the 160 BPM grid and lock to each other; the menu
+bed plays alone, so it keeps the song's own tempo.
 
 | Layer | File | Plays during | Content |
 |---|---|---|---|
-| **A** bed | `audio/bed.m4a` | title → email → picker | The menu tune: an 8-bar march for suling and angklung. No pulse. 12.0 s. |
+| **A** bed | `audio/bed.m4a` | title → email → picker | *Hari Merdeka*, first couplet — suling and angklung, 2/4 at 120 BPM. No pulse. 8.0 s. |
 | — crowd | `audio/crowd.m4a` | **race only** | The kampung, underneath the race. 6.0 s. |
 | **B** pulse | `audio/pulse.m4a` | countdown → race | Kendang + marching snare, quarter notes at 160. **This is the tap metronome.** 3.0 s. |
 | **C** hook | `audio/hook.m4a` | race, from combo ≥ 4 | Tanjidor brass hook. A reward for finding the rhythm. 6.0 s. |
@@ -80,32 +86,43 @@ crossfade, no artefacts, one musical idea the whole way through.
 
 **The menus are music only — no crowd.** The crowd arriving *is* the cue that the
 race is about to start, which is worth more than atmosphere on a cover screen. It
-also means the bed plays alone, so its length is unconstrained; it runs 8 bars
-because a player spends twenty-odd seconds reading and typing on those screens and
-a 4-bar phrase starts to nag over that long. 12 s still divides 6 and 3, so
-layering it stays possible.
+also means the bed plays alone, which frees both its length and its tempo — see
+below, because the tune needs its own tempo rather than the race's.
 
-### The menu tune, and "Hari Merdeka"
+### The menu tune is "Hari Merdeka"
 
-The obvious tune for a 17 Agustus campaign is **"Hari Merdeka"** — *Tujuh belas
-Agustus tahun empat lima*. What is in `BED_RIFF` is deliberately *not* that song,
-for two reasons worth recording:
+The first couplet, transcribed in `BED_RIFF` from the published *not angka*:
 
-**It is in copyright.** H. Mutahar wrote it in 1946 and died in 2004, so under
-UU 28/2014 (life + 70 years) it is protected until roughly 2074. Using it in a
-paid-traffic commercial campaign needs a licence — in Indonesia that means WAMI or
-LMKN. This is routine clearance, not an obstacle, but it is not free and it is not
-automatic just because the song is a national one.
+```
+| 0 5. 5. 5. | 3 3 3 3 | 2 3 4 2 | 1  5. |   Tujuh belas Agustus tahun empat lima
+| 0 5. 5. 5. | 5 5 5 5 | 4 5 6 4 | 3   .  |   itulah hari kemerdekaan kita
+```
 
-**And a wrong note would be worse than no quote at all.** Every Indonesian player
-knows this melody, so an approximation reads as an error rather than an
-arrangement, and the notation available online could not be verified against a
-source that would reproduce it.
+Two things the notation settles that guesswork could not, and both change the
+arrangement:
 
-So `BED_RIFF` is an original melody in the same idiom: the rising-fourth opening,
-the dotted march tread, the climb to the fifth and the walk back down. If the
-licence is cleared, swapping the real tune in is `BED_RIFF` and `BED_BASS` and
-nothing else in the file.
+- **It is in 2/4, not 4/4.** Every written bar is four beamed eighths. Read as 4/4
+  the phrasing comes out wrong.
+- **The dots under the pickup notes are octave-below markers**, not duration dots.
+  Each phrase opens on the sol *beneath* the tonic and leaps up a fourth onto the
+  downbeat, and that rising fourth is the whole march character of the thing.
+
+Transposed to D major to sit with every other cue, so `1` = D4, `5.` = A3.
+
+**Tempo: 120 BPM, which is the song's and not the game's.** The bed plays alone on
+the menus, so unlike the race stems its tempo is unconstrained — and it should be,
+because forcing a national march onto the race's 160 BPM grid runs it about 30%
+fast and makes a tune every player knows sound rushed. Eight bars of 2/4 at 120 BPM
+is 8.000 s. The race stems stay locked to each other at 6 and 3 s.
+
+Extending to the full first section is adding rows 3–4 of the notation to
+`BED_RIFF`, which doubles the stem to 16 s and about +43 KB.
+
+> **Licensing.** H. Mutahar wrote this in 1946 and died in 2004, so under UU 28/2014
+> (life + 70 years) it is in copyright until roughly **2074**. Commercial use on paid
+> traffic needs a licence — in Indonesia, WAMI or LMKN. Routine clearance, but not
+> free, and not automatic just because the song is a national one. **This is not
+> cleared in-repo; it is an outstanding task before launch.**
 
 The drum loop is 2 bars where the melody is 4. It is a drum pattern whose only
 variation was the fill, and 3.0 s divides 6.0 s exactly, so the two stay
@@ -341,22 +358,21 @@ load time is the funnel. What the synthesised set actually encodes to:
 | | |
 | --- | --- |
 | `sfx.m4a` — 15 cues, 8.0 s, q60 | 60.9 KB |
-| `bed.m4a` — 12 s, q40 | 57.6 KB |
+| `bed.m4a` — 8 s, q40 | 43.0 KB |
 | `hook.m4a` — 6 s, q55 | 44.1 KB |
 | `crowd.m4a` — 6 s, q35 | 31.5 KB |
 | `payoff.m4a` — 4 s, q55 | 30.7 KB |
 | `pulse.m4a` — 3 s, q70 | 23.0 KB |
-| **Total** | **247.7 KB** |
+| **Total** | **233.2 KB** |
 
-That is 24% over the 200 KB target. The target was set before the menus had a tune, and
-a 12-second melody costs ~34 KB more than the 4-bar ostinato it replaced — a fair trade,
-but it is a trade, so the number stays at 200 rather than being quietly moved to match.
-It is what the next addition has to argue against.
+That is 17% over the 200 KB target. The target was set before the menus had a tune, and
+the melody costs ~19 KB more than the ostinato it replaced — a fair trade, but it is a
+trade, so the number stays at 200 rather than being quietly moved to match. It is what
+the next addition has to argue against.
 
-If the bytes are needed back, the cheapest 24 KB is halving `bed` to 4 bars; the next
-cheapest is trimming `crowd` to 4 s, which is imperceptible at −26 dBFS under a kendang.
-Note also that VBR quality is not a smooth dial — `bed` encodes to the same size at q35
-and q40, so q40 is free.
+If the bytes are needed back, the cheapest is trimming `crowd` to 4 s (~10 KB), which is
+imperceptible at −26 dBFS under a kendang. Note also that VBR quality is not a smooth
+dial — `bed` encodes to the same size at q35 and q40, so q40 is free.
 
 The first pass came in at **491 KB**, and only one of the three fixes was about bitrate.
 Shipping `roar` and `win` at all was redundant — `sfx_win()` already mixes `sfx_roar()`

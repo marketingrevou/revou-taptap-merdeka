@@ -501,61 +501,79 @@ def stem_hook():
     return out
 
 
-# The menu tune: an 8-bar march phrase, eighth-note slots, None = hold or rest.
+# ------------------------------------------------------- the menu tune
 #
-# This is an ORIGINAL melody in the 17 Agustus march idiom -- the rising-fourth
-# opening, the dotted march tread, the climb to the fifth and the walk back down.
-# It is deliberately not "Hari Merdeka": that song is H. Mutahar, 1946, and the
-# author died in 2004, so under UU 28/2014 it is in copyright until roughly 2074.
-# A paid-traffic campaign using it commercially needs a WAMI/LMKN licence.
+# "Hari Merdeka" (H. Mutahar, 1946), first couplet, transcribed from the published
+# not angka:
 #
-# If that licence is cleared, swapping the real tune in is this table and the bass
-# line under it -- nothing else in the file has to change.
+#   | 0 5. 5. 5. | 3 3 3 3 | 2 3 4 2 | 1  5. |   Tujuh belas Agustus tahun empat lima
+#   | 0 5. 5. 5. | 5 5 5 5 | 4 5 6 4 | 3   .  |   itulah hari kemerdekaan kita
+#
+# Two things the notation settles that guesswork could not. The song is in **2/4**,
+# not 4/4 -- every written bar is four beamed eighths -- and the dots under the
+# pickup notes are octave-below markers, so each phrase opens on the sol *beneath*
+# the tonic and leaps up. That rising fourth into the downbeat is the whole march
+# character of the thing.
+#
+# COPYRIGHT: Mutahar died in 2004, so under UU 28/2014 (life + 70) this is in
+# copyright until roughly 2074. Commercial use on paid traffic needs a WAMI/LMKN
+# licence. Transcribed here at the client's direction; clearance is theirs.
+#
+# Transposed to D major to match every other cue: 1=D4, so 5.=A3, 3=F#4, 6=B4.
+# Slots are eighths; None holds the note before it, or rests if nothing precedes.
 BED_RIFF = [
-    ["A4",  None, "A4",  None, "D5",  None, None, None],
-    ["D5",  None, "E5",  None, "F#5", None, "E5", None],
-    ["D5",  None, None,  None, "A4",  None, "B4", None],
-    ["A4",  None, None,  None, None,  None, None, None],
-    ["B4",  None, "B4",  None, "D5",  None, "B4", None],
-    ["A4",  None, "G4",  None, "F#4", None, None, None],
-    ["E4",  None, "F#4", None, "G4",  None, "E4", None],
-    ["D4",  None, None,  None, None,  None, None, None],
+    [None,  "A3",  "A3",  "A3"],    # 0  5. 5. 5.   Tu-juh-be
+    ["F#4", "F#4", "F#4", "F#4"],   # 3  3  3  3    -las A-gus-tus
+    ["E4",  "F#4", "G4",  "E4"],    # 2  3  4  2    ta-hun em-pat
+    ["D4",  None,  "A3",  None],    # 1     5.      li-ma
+    [None,  "A3",  "A3",  "A3"],    # 0  5. 5. 5.   i-tu-lah
+    ["A4",  "A4",  "A4",  "A4"],    # 5  5  5  5    ha-ri ke-mer-
+    ["G4",  "A4",  "B4",  "G4"],    # 4  5  6  4    -de-ka-an ki-
+    ["F#4", None,  None,  None],    # 3  .          -ta
 ]
-BED_BASS = ["D3", "D3", "A3", "A3", "G3", "D3", "A3", "D3"]
+BED_BASS = ["D3", "D3", "D3", "D3", "A3", "D3", "G3", "D3"]
 BED_BARS = len(BED_RIFF)
-BED_LOOP = BED_BARS * BAR          # 12.0 s -- and 12 divides both 6 and 3
+
+# The bed plays alone on the menus, so unlike the race stems its tempo is free --
+# and a national march wants its own tempo, not the race's. 120 BPM in 2/4 puts the
+# opening line at 4.0 s, which is how the song is actually sung; forcing it onto the
+# race's 160 BPM grid would run it ~30% fast and make a tune everyone knows sound
+# rushed. Eight bars of 2/4 at 120 BPM = 8.000 s exactly.
+BED_BPM  = 120
+BED_BEAT = 60.0 / BED_BPM          # 0.5 s
+BED_E    = BED_BEAT / 2            # eighth, 0.25 s
+BED_BAR  = 2 * BED_BEAT            # 2/4, so 1.0 s
+BED_LOOP = BED_BARS * BED_BAR      # 8.000 s
 
 
 def stem_bed():
     """Layer A, title through picker: the tune, and the only music on the menus.
 
-    Eight bars rather than four because this is a melody the player will hear for
-    twenty-odd seconds while they read and type, and a four-bar phrase on a loop
-    that short starts to nag. Nothing else plays underneath it now, so its length
-    is unconstrained -- though 12 s still divides 6 and 3, which keeps the option
-    of layering it open.
+    The first couplet of "Hari Merdeka" -- see BED_RIFF for the transcription and
+    the copyright note. Eight bars of 2/4 at 120 BPM, which is the song's own tempo
+    rather than the race's.
 
-    Scored for suling and angklung with the brass well back, and with NO kendang on
-    the quarters. That last part is deliberate: the race's kendang is the tap cue,
-    and putting a competing pulse on the menus would teach a rhythm to a player who
-    has nothing to tap yet."""
+    Scored for suling and angklung with the tuba on the downbeat, and with NO
+    kendang. That last part is deliberate: the race's kendang is the tap cue, and
+    putting a competing pulse on the menus would teach a rhythm to a player who has
+    nothing to tap yet."""
     out = np.zeros(n(BED_LOOP))
-    E = BEAT / 2
+    slots = len(BED_RIFF[0])
     for bar, line in enumerate(BED_RIFF):
         for i, note in enumerate(line):
             if note is None:
                 continue
-            nxt = next((j for j in range(i + 1, 8) if line[j] is not None), 8)
-            dur = min((nxt - i) * E, E * 4.5)
-            at = bar * BAR + i * E
+            # a None after a note holds it; the run stops at the bar line
+            nxt = next((j for j in range(i + 1, slots) if line[j] is not None), slots)
+            dur = (nxt - i) * BED_E
+            at = bar * BED_BAR + i * BED_E
             place(out, suling(note, dur * 1.05), at, 0.50)
-            place(out, angklung(note, min(dur * 1.6, BEAT * 2)), at, 0.22)
+            place(out, angklung(note, min(dur * 1.6, BED_BEAT * 2)), at, 0.22)
             # no brass here: at the 0.10 gain it wanted it was inaudible under the
             # suling, but its harmonics still cost the VBR encoder real bytes
-        # tuba on 1 and 3 gives the march tread without a tappable pulse
-        for beat in (0, 2):
-            place(out, tuba(BED_BASS[bar], BEAT * 0.75), bar * BAR + beat * BEAT, 0.26)
-        place(out, kentongan(0.08, 1150), bar * BAR, 0.10)    # one soft tick a bar
+        # tuba on the downbeat gives the march tread without a tappable pulse
+        place(out, tuba(BED_BASS[bar], BED_BEAT * 0.8), bar * BED_BAR, 0.26)
+        place(out, kentongan(0.08, 1150), bar * BED_BAR, 0.09)   # one soft tick a bar
     return out
 
 
