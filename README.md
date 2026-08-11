@@ -63,6 +63,81 @@ plus the CPU pace in `makeRacers()` (`r.skill`, `r.wait`) and the rubber-band
 coefficients in `step()`. Raise `r.wait` to make the opponents easier, lower it to
 make them meaner.
 
+## Variants and the prize draw
+
+One build serves two campaigns. The page reads the variant off `location.pathname`:
+`/swe` gets the Software Engineering prize table, anything else gets Data Analytics.
+
+| | Prize | Odds |
+| --- | --- | --- |
+| **`/`** (DA) | Early Bird 2 juta + BNSP + Exclusive Starter Kit | 30% |
+| | Early Bird 2 juta + BNSP | 40% |
+| | Early Bird 2 juta + BNSP + Exclusive AI Class Library | 30% |
+| **`/swe`** | Early Bird 3.5 juta + 1.5 juta | 10% |
+| | Early Bird 3.5 juta + 1 juta | 70% |
+| | Early Bird 3.5 juta + 500rb | 20% |
+
+The flow is **cover → email → picker → race → results**, and the prize is claimed at
+the *email* step, not at the finish. That hides the network round trip behind the
+character picker, and surfaces any failure while the player has invested nothing.
+Everyone who finishes keeps their prize — placing does not gate it.
+
+### Where the odds actually live
+
+In `tools/apps-script/Code.gs`, not in the page. The Apps Script web app draws the
+prize server-side, writes `timestamp, email, variant, prize` to the sheet, and
+returns the *same* prize for an email that has played before. That is what makes
+one-play-per-email hold and the percentages mean something — a player who replays,
+clears storage, or opens incognito gets their original prize back. The page never
+sees the weights.
+
+To set it up: open the Sheet → **Extensions → Apps Script**, paste `Code.gs`, then
+**Deploy → New deployment → Web app** with *Execute as: Me* and *Who has access:
+Anyone*. Put the `/exec` URL into `LEAD_ENDPOINT` at the top of the `<script>` block
+in `index.html`. Re-deploy (not just save) after editing the script, or the live URL
+keeps serving the old code. `testDistribution()` in the editor sanity-checks the
+weights before you go live.
+
+**Left empty, `LEAD_ENDPOINT` makes the page draw locally** so it stays playable
+offline — but nothing is recorded and nothing is enforced. Fine for development,
+never for a live campaign.
+
+The request is a `POST` with a `text/plain` body: Apps Script does not answer a
+preflighted request, and that content type keeps it a "simple" one the browser sends
+without an `OPTIONS` round trip. It also keeps the email out of the URL, which a
+`doGet`/JSONP approach could not.
+
+**If the page reports "Gagal menyimpan" and the console shows a CORS error**, the
+deployment's access is almost certainly wrong rather than anything being wrong with
+CORS. *Who has access* must be **Anyone** — not "Anyone with Google Account", which
+still refuses an anonymous visitor. Google answers a restricted deployment with a
+`403` HTML "Akses Ditolak" page that carries no `Access-Control-Allow-Origin` header,
+so the browser reports the missing header and hides the real cause. Check it from a
+terminal, where the status is visible:
+
+```bash
+curl -sL -o /dev/null -w '%{http_code}\n' "$EXEC_URL"
+```
+
+`200` and a JSON body means the deployment is public; `403` and HTML means it is not.
+Note that each **Deploy → New deployment** mints a *new* `/exec` URL — use *Manage
+deployments → edit* to keep the existing one.
+
+### Serving `/swe`
+
+Both variants are the same `index.html`, so the host has to rewrite. `_redirects`
+(Netlify) and `vercel.json` are both in the repo; `tools/serve.py` does the same
+thing locally so you can test both paths.
+
+The trailing slash is stripped **before** the rewrite, deliberately: at `/swe` the
+relative asset URLs resolve against the root, but at `/swe/` they would resolve to
+`/swe/assets/…` and 404. For nginx:
+
+```nginx
+location = /swe/ { return 301 /swe; }
+location = /swe  { try_files /index.html =404; }
+```
+
 ## Design
 
 Everything outside the race field follows the Figma frame

@@ -75,9 +75,6 @@
                        0 .17em 0 rgba(70,18,20,.32)}
 
   h2{font-size:clamp(20px,4.4vmin,44px)}
-  p.hint{color:#5e3626;font-size:clamp(12px,2.1vmin,17px);font-weight:600;
-         text-shadow:0 0 7px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.95)}
-  .scrim p.hint{color:#f6e3d4;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 
   /* ---- ad lockup: the title screen, rebuilt from the Figma frame ---------- */
   /* --w is the wordmark width; every other size in the lockup is a ratio of it,
@@ -117,7 +114,6 @@
   /* the CTA is not in the frame, so it is sized off --w to carry the same
      weight as the badge above it rather than clamping on its own */
   .cta .btn{font-size:calc(var(--w) * .042);padding:calc(var(--w) * .026) calc(var(--w) * .062)}
-  .cta .hint{font-size:calc(var(--w) * .028)}
 
   /* portrait and small landscape: one centred column, hero art dropped so the
      copy is never squeezed against it */
@@ -148,7 +144,6 @@
      backdrop, and on the gold card it just muddies the letterforms */
   .email-card h2{font-size:clamp(20px,4vmin,36px);color:var(--merah);text-transform:uppercase;
                  line-height:1.05;text-shadow:0 .06em 0 rgba(104,80,32,.25)}
-  .email-sub{color:var(--ink);font-weight:600;font-size:clamp(12px,2.1vmin,17px);text-align:center}
   #email-form{display:flex;flex-direction:column;gap:clamp(8px,1.6vmin,14px);width:100%;align-items:stretch}
   #email-input{font:inherit;font-weight:600;font-size:clamp(15px,2.4vmin,20px);color:var(--ink);
                padding:clamp(10px,1.9vmin,16px) clamp(12px,2.2vmin,18px);
@@ -262,7 +257,6 @@
         </div>
         <div class="cta">
           <button class="btn merah" id="btn-play">Mulai</button>
-          <p class="hint">Tap layar / tekan SPASI untuk melompat</p>
         </div>
       </div>
       <img class="ad-hero" src="sprites/adik_hero.png" alt="">
@@ -271,8 +265,7 @@
 
   <div class="layer" id="scr-email">
     <div class="badge email-card">
-      <h2>Satu langkah lagi</h2>
-      <p class="email-sub">Masukkan email untuk mengunci hadiahmu</p>
+      <h2>Kunci Hadiahmu</h2>
       <form id="email-form" novalidate>
         <input id="email-input" type="email" inputmode="email" autocomplete="email"
                spellcheck="false" placeholder="nama@email.com" aria-label="Alamat email" required>
@@ -293,7 +286,6 @@
     <div id="nameplate" class="badge"><b id="pick-name"></b><i id="pick-tag"></i></div>
     <div id="dots"></div>
     <button class="btn merah" id="btn-go">Ayo Balap!</button>
-    <p class="hint">Geser untuk memilih — kamu melawan 3 peserta lainnya</p>
   </div>
 
   <div class="layer pass" id="scr-race"></div>
@@ -529,7 +521,6 @@ $("mute").onclick = () => { muted = !muted; $("mute").textContent = muted ? "�
 let state = "title";     // title | select | countdown | race | finish
 let pick = 0;
 let racers = [], camX = CAM_MIN, clock = 0, anim = 0, countdown = 0, finishAt = 0, flash = 0;
-let banner = null;       // {text, life}
 const puffs = [];
 
 function makeRacers(){
@@ -549,7 +540,7 @@ function makeRacers(){
     r.skill = rnd(.25, .90);                     // how tight their rhythm is
     r.wait  = lerp(.39, .152, r.skill);          // pause on the ground per hop
   });
-  camX = CAM_MIN; clock = 0; finishAt = 0; puffs.length = 0; banner = null;
+  camX = CAM_MIN; clock = 0; finishAt = 0; puffs.length = 0;
 }
 
 function hop(r){
@@ -557,10 +548,7 @@ function hop(r){
   const perfect = r.groundT <= PERFECT;
   r.combo = perfect ? Math.min(r.combo + 1, COMBO_MAX) : 0;
   r.step = r.dist * (1 + r.combo * .028);
-  if(r.human){
-    perfect && r.combo > 1 ? sfxPerfect() : sfxHop();
-    if(perfect && r.combo > 0 && r.combo % 4 === 0) banner = {text:"MANTAP! x" + r.combo, life:1};
-  }
+  if(r.human) perfect && r.combo > 1 ? sfxPerfect() : sfxHop();
 }
 
 function tap(){
@@ -636,7 +624,6 @@ function step(dt){
       if(r.human){
         finishAt = clock; flash = 1;
         state = "finish";
-        banner = {text: r.place === 1 ? "JUARA!" : "FINIS!", life: 1.6};
       }
     }
   }
@@ -652,7 +639,6 @@ function step(dt){
     if(p.age >= p.life){ puffs.splice(i,1); continue; }
     p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt;
   }
-  if(banner){ banner.life -= dt; if(banner.life <= 0) banner = null; }
   if(flash > 0) flash -= dt * 1.6;
 
   const allIn = racers.every(r => r.done);
@@ -881,19 +867,13 @@ function drawField(){
   }
   ctx.restore();
 
-  // distance ticks every 100 world px
-  ctx.font = `bold ${Math.round(SS*.021)}px ${FONT}`;
-  ctx.textAlign = "center";
+  // distance ticks every 100 world px — unlabelled: the HUD rail carries the
+  // actual progress readout, these just give the track something to scroll past
   for(let wx = START_X; wx <= RACE_LEN; wx += 100){
     const x = wx - camX;
     if(x < -60 || x > W + 60) continue;
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.fillRect(x - 2, laneY(3) - 4, 4, 12);
-    const pct = Math.round((wx - START_X) / (RACE_LEN - START_X) * 100);
-    if(pct % 25 === 0 && pct > 0 && pct < 100){
-      ctx.fillStyle = "rgba(255,255,255,.8)";
-      ctx.fillText(pct + "%", x, laneY(3) - 10);
-    }
   }
 }
 
@@ -1318,7 +1298,8 @@ function drawBottomBar(){
   if(zone < 90 * s) return;
   const h = clamp(zone * .34, 76 * s, 150 * s);
   const w = Math.min(SW - 44 * s, 440 * s);
-  const cy = top + (zone - safeB) * .42;
+  // centred now that no caption hangs below it
+  const cy = top + (zone - safeB) * .5;
   const ready = state === "race" && !me.air && me.lock <= 0 && !me.done;
 
   ctx.save();
@@ -1333,19 +1314,6 @@ function drawBottomBar(){
   ctx.font = `bold ${Math.round(42*s)}px ${FONT}`;
   ctx.fillText(me.done ? "SELESAI" : "TAP!", SW / 2, cy);
   ctx.restore();
-
-  // the caption the reference carries under its button
-  const capY = cy + h / 2 + 22 * s;
-  if(capY < SH - safeB - 8 * s){
-    ctx.save();
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.round(15*s)}px ${FONT}`;
-    ctx.fillStyle = "rgba(120,12,16,.55)";
-    roundRect(SW / 2 - w * .35, capY - 14 * s, w * .7, 28 * s, 14 * s); ctx.fill();
-    ctx.fillStyle = PUTIH;
-    ctx.fillText("Terus tap untuk melompat!", SW / 2, capY);
-    ctx.restore();
-  }
 }
 
 function drawHud(){
@@ -1402,16 +1370,6 @@ function drawHud(){
     ctx.fillStyle = MERAH; ctx.strokeStyle = PUTIH; ctx.lineWidth = 5 * s;
     ctx.strokeText("TAP! TAP! TAP!", W/2, H * .3);
     ctx.fillText("TAP! TAP! TAP!", W/2, H * .3);
-    ctx.restore();
-  }
-
-  if(banner){
-    ctx.save();
-    ctx.globalAlpha = clamp(banner.life * 2.4, 0, 1);   // hold, then fade fast
-    ctx.font = `bold ${Math.round(56*s)}px ${FONT}`;
-    ctx.lineJoin = "round";
-    ctx.fillStyle = KUNING_2; ctx.strokeStyle = MERAH_TUA; ctx.lineWidth = 9 * s;
-    ctx.strokeText(banner.text, W/2, H * .17); ctx.fillText(banner.text, W/2, H * .17);
     ctx.restore();
   }
 
@@ -1579,7 +1537,7 @@ function endRace(){
     `<div class="rowline${r.human ? " me" : ""}">
        <span class="pos">${i + 1}</span>
        <img src="sprites/${CHARS[r.ci].id}_hero.png" alt="">
-       <span>${CHARS[r.ci].name}${r.human ? " (kamu)" : ""}</span>
+       <span>${CHARS[r.ci].name}</span>
        <span>${r.done ? r.time.toFixed(2) + "s" : "—"}</span>
      </div>`).join("");
   // everyone who finishes keeps the prize their email drew — placing does not gate it
